@@ -63,8 +63,8 @@ export async function getFlights(boundsString: string): Promise<Flight[]> {
 }
 
 function parseFlight(id: string, flight: Record<string, unknown>): Flight {
-  const trail = (getNested(flight, "trail") as unknown[]) || [];
-  const lastTrail = (trail[trail.length - 1] as Record<string, unknown>) || {};
+  const trail =
+    (getNested(flight, "trail") as Array<Record<string, unknown>>) || [];
   return {
     id: getNestedOrDefault(flight, "identification.id", id),
     flightNumber: getNested(flight, "identification.number.default"),
@@ -81,9 +81,9 @@ function parseFlight(id: string, flight: Record<string, unknown>): Flight {
         getNested(flight, "airline.short") ?? getNested(flight, "airline.name"),
     },
     metrics: {
-      altitude: getNested(lastTrail, "alt"),
-      groundSpeed: getNested(lastTrail, "spd"),
-      heading: getNested(lastTrail, "hd"),
+      altitude: getNested(trail[0], "alt"),
+      groundSpeed: getNested(trail[0], "spd"),
+      heading: getNested(trail[0], "hd"),
     },
     route: {
       origin: {
