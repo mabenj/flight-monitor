@@ -1,5 +1,4 @@
-import { get } from "node:http";
-import { Flight } from "./types.ts";
+import { Flight } from "./lib/types.ts";
 import { getNested, getNestedOrDefault } from "./utils.ts";
 
 const FLIGHT_DETAILS_URL =

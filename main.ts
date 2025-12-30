@@ -1,17 +1,19 @@
-import { getFlights } from "./api.ts";
 import { load } from "@std/dotenv";
-import { logFlights } from "./flight-console-logger.ts";
+import { logFlights } from "./src/lib/flight-console-logger.ts";
+import { getBounds } from "./src/database/bounds.ts";
+import { delay } from "./src/utils.ts";
+import { getFlights } from "./src/fr24-api.ts";
 
 async function main() {
-  const bounds = Deno.env.get("BOUNDS");
-  if (!bounds) {
-    console.error("BOUNDS environment variable is not set.");
-    return;
-  }
   while (true) {
-    const flights = await getFlights(bounds);
+    const bounds = await getBounds();
+    if (!bounds) {
+      console.error("Bounds not set in the database. Exiting.");
+      Deno.exit(1);
+    }
+    const flights = await getFlights(bounds.join(","));
     logFlights(flights);
-    await new Promise((resolve) => setTimeout(resolve, 30000));
+    await delay(30000);
   }
 }
 
