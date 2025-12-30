@@ -1,8 +1,8 @@
 import { load } from "@std/dotenv";
 import { logFlights } from "./src/lib/flight-console-logger.ts";
 import { getBounds } from "./src/database/bounds.ts";
-import { delay } from "./src/utils.ts";
 import { getFlights } from "./src/fr24-api.ts";
+import { delay } from "./src/lib/utils.ts";
 
 async function main() {
   while (true) {

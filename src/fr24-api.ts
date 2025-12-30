@@ -1,5 +1,5 @@
 import { Flight } from "./lib/types.ts";
-import { getNested, getNestedOrDefault } from "./utils.ts";
+import { getNested, getNestedOrDefault } from "./lib/utils.ts";
 
 const FLIGHT_DETAILS_URL =
   "https://data-live.flightradar24.com/clickhandler/?flight=";
