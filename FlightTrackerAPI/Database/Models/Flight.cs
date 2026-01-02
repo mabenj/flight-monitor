@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 
 namespace Database.Models {
-    internal class Flight {
+    public class Flight {
 
         [Key]
         public required string Id {

@@ -5,7 +5,7 @@ namespace Database.Models {
 
     [Index(nameof(Icao), IsUnique = true)]
     [Index(nameof(Iata), IsUnique = true)]
-    internal class Airport {
+    public class Airport {
         [Key]
         public int Id {
             get; set;

@@ -3,7 +3,7 @@ using FlightTrackerAPI.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Database {
-    internal class AppDbContext : DbContext {
+    public class AppDbContext : DbContext {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<Flight> Flights => Set<Flight>();
@@ -15,6 +15,8 @@ namespace Database {
         public DbSet<Airport> Airports => Set<Airport>();
 
         public DbSet<ActiveFlight> ActiveFlights => Set<ActiveFlight>();
+
+        public DbSet<Bounds> Bounds => Set<Bounds>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);

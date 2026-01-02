@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
 namespace Database.Models {
-    internal class Bounds {
+    public class Bounds {
         [Key]
         public int Id {
             get; set;

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Database.Models {
     [Index(nameof(Icao), IsUnique = true)]
     [Index(nameof(Iata), IsUnique = true)]
-    internal class Airline {
+    public class Airline {
 
         [Key]
         public int Id {

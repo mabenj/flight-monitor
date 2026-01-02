@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Database.Models {
     [Index(nameof(Registration), IsUnique = true)]
-    internal class Aircraft {
+    public class Aircraft {
         [Key]
         public int Id {
             get; set;
