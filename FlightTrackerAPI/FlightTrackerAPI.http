@@ -1,0 +1,6 @@
+@FlightTrackerAPI_HostAddress = http://localhost:5138
+
+GET {{FlightTrackerAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
