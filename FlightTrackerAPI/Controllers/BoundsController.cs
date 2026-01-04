@@ -1,7 +1,6 @@
 ﻿using Database;
 using Database.Models;
 using DTO;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
