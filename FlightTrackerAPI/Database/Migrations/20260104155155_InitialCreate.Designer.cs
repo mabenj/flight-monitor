@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FlightTrackerAPI.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260102151926_AddActiveFlights")]
-    partial class AddActiveFlights
+    [Migration("20260104155155_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -94,6 +94,29 @@ namespace FlightTrackerAPI.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("Airports");
+                });
+
+            modelBuilder.Entity("Database.Models.Bounds", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("LatitudeMax")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("LatitudeMin")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("LongitudeMax")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("LongitudeMin")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Bounds");
                 });
 
             modelBuilder.Entity("Database.Models.Flight", b =>
