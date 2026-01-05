@@ -1,4 +1,5 @@
 using Database;
+using FlightScraper;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,8 @@ builder.Services.AddDbContext<AppDbContext>(options => {
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
+builder.Services.AddHostedService<FlightScraperService>();
 
 var app = builder.Build();
 

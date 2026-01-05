@@ -4,7 +4,6 @@ using DTO;
 using FlightTrackerAPI.Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace FlightTracker.Controllers {
     [Route("api/[controller]")]

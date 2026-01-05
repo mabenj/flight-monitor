@@ -3,5 +3,7 @@
     <File Path=".gitignore" />
   </Folder>
   <Project Path="DTO/DTO.csproj" Id="cdd54bb3-58ae-4d7a-aa58-1d462f51523d" />
+  <Project Path="FlightScraper/FlightScraper.csproj" Id="904fc113-c67a-4cfa-88f0-d42048699147" />
   <Project Path="FlightTrackerAPI/FlightTrackerAPI.csproj" Id="639ff08e-250f-47a3-b88e-fa76ebdf60b0" />
+  <Project Path="FlightTrackerClient/FlightTrackerClient.csproj" Id="1f8e0958-35a3-481a-aaab-51cd45740da2" />
 </Solution>

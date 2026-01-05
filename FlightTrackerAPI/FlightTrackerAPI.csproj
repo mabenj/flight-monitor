@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DTO\DTO.csproj" />
+    <ProjectReference Include="..\FlightScraper\FlightScraper.csproj" />
   </ItemGroup>
 
 </Project>
