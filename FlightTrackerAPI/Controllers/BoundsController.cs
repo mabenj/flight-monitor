@@ -25,8 +25,8 @@ namespace FlightTracker.Controllers {
             return bounds.Select(MapToDto).ToList();
         }
 
-        [HttpPost("Active")]
-        public async Task<ActionResult> SetActive([FromBody] BoundsDto bounds, CancellationToken ct) {
+        [HttpPost]
+        public async Task<ActionResult> UpdateBounds([FromBody] BoundsDto bounds, CancellationToken ct) {
             if (bounds.LongitudeMax <= bounds.LongitudeMin || bounds.LatitudeMax <= bounds.LatitudeMin) {
                 return new BadRequestResult();
             }
@@ -46,6 +46,7 @@ namespace FlightTracker.Controllers {
                     existingBounds.LatitudeMin = bounds.LatitudeMin;
                     existingBounds.IsActive = true;
                     existingBounds.Timestamp = DateTime.UtcNow;
+                    existingBounds.Name = bounds.Name;
                 } else {
                     dbContext.Bounds.Add(new Bounds {
                         LongitudeMin = bounds.LongitudeMin,
@@ -53,7 +54,8 @@ namespace FlightTracker.Controllers {
                         LatitudeMax = bounds.LatitudeMax,
                         LatitudeMin = bounds.LatitudeMin,
                         IsActive = true,
-                        Timestamp = DateTime.UtcNow
+                        Timestamp = DateTime.UtcNow,
+                        Name = bounds.Name
                     });
                 }
                 await dbContext.SaveChangesAsync(ct);
@@ -74,7 +76,8 @@ namespace FlightTracker.Controllers {
                 LongitudeMin = bounds.LongitudeMin,
                 Id = bounds.Id,
                 IsActive = bounds.IsActive,
-                Timestamp = bounds.Timestamp
+                Timestamp = bounds.Timestamp,
+                Name = bounds.Name
             };
         }
     }

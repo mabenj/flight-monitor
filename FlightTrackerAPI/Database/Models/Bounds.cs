@@ -30,5 +30,9 @@ namespace Database.Models {
         public DateTime Timestamp {
             get; set;
         }
+
+        public string? Name {
+            get; set;
+        }
     }
 }
