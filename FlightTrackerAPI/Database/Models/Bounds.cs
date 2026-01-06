@@ -22,5 +22,13 @@ namespace Database.Models {
         public double LatitudeMin {
             get; set;
         }
+
+        public bool IsActive {
+            get; set;
+        }
+
+        public DateTime Timestamp {
+            get; set;
+        }
     }
 }

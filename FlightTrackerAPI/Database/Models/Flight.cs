@@ -93,5 +93,12 @@ namespace Database.Models {
             get; set;
         }
 
+        public int? BoundsId {
+            get; set;
+        }
+
+        public Bounds? Bounds {
+            get; set;
+        }
     }
 }

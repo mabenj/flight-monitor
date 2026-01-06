@@ -3,6 +3,7 @@ using System;
 using Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FlightTrackerAPI.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260106185051_AddBoundsIsActiveTimestamp")]
+    partial class AddBoundsIsActiveTimestamp
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -142,9 +145,6 @@ namespace FlightTrackerAPI.Database.Migrations
                     b.Property<double?>("Altitude")
                         .HasColumnType("REAL");
 
-                    b.Property<int?>("BoundsId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Callsign")
                         .HasColumnType("TEXT");
 
@@ -184,8 +184,6 @@ namespace FlightTrackerAPI.Database.Migrations
 
                     b.HasIndex("AirlineId");
 
-                    b.HasIndex("BoundsId");
-
                     b.HasIndex("DestinationId");
 
                     b.HasIndex("OriginId");
@@ -213,10 +211,6 @@ namespace FlightTrackerAPI.Database.Migrations
                         .WithMany("Flights")
                         .HasForeignKey("AirlineId");
 
-                    b.HasOne("Database.Models.Bounds", "Bounds")
-                        .WithMany()
-                        .HasForeignKey("BoundsId");
-
                     b.HasOne("Database.Models.Airport", "Destination")
                         .WithMany("Arrivals")
                         .HasForeignKey("DestinationId");
@@ -228,8 +222,6 @@ namespace FlightTrackerAPI.Database.Migrations
                     b.Navigation("Aircraft");
 
                     b.Navigation("Airline");
-
-                    b.Navigation("Bounds");
 
                     b.Navigation("Destination");
 
