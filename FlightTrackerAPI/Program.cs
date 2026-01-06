@@ -1,6 +1,8 @@
 using Database;
 using FlightScraper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,15 @@ builder.Services.AddDbContext<AppDbContext>(options => {
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddHttpClient();
+builder.Services
+    .AddHttpClient("Fr24Api")
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler() { AutomaticDecompression = DecompressionMethods.All });
+builder.Services
+    .AddHttpClient("SelfApi", client => {
+        var baseUrl = builder.Configuration["SelfApiBaseUrl"] ?? "https://localhost:5001";
+        client.BaseAddress = new Uri(baseUrl);
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler() { AutomaticDecompression = DecompressionMethods.All });
 builder.Services.AddHostedService<FlightScraperService>();
 
 var app = builder.Build();

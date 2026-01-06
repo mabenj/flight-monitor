@@ -1,5 +1,6 @@
 ﻿using DTO;
 using System.Data;
+using System.Globalization;
 using System.Text.Json;
 
 namespace FlightScraper {
@@ -44,7 +45,7 @@ namespace FlightScraper {
         }
 
         public async Task<List<FlightDto>> GetFlightsAsync(BoundsDto bounds) {
-            var url = $"{ReatimeFlightsUrl}?bounds={bounds.LatitudeMax},{bounds.LatitudeMin},{bounds.LongitudeMin},{bounds.LongitudeMax}";
+            var url = $"{ReatimeFlightsUrl}?bounds={bounds.LatitudeMax.ToString("F2", CultureInfo.InvariantCulture)},{bounds.LatitudeMin.ToString("F2", CultureInfo.InvariantCulture)},{bounds.LongitudeMin.ToString("F2", CultureInfo.InvariantCulture)},{bounds.LongitudeMax.ToString("F2", CultureInfo.InvariantCulture)}";
             foreach (var param in RealtimeFlightParams) {
                 url += $"&{param.Key}={param.Value}";
             }
@@ -73,7 +74,7 @@ namespace FlightScraper {
         }
 
         private FlightDto ParseFlight(string id, Dictionary<string, JsonElement> flight) {
-            var trail = GetNestedArray(flight, "trail");
+            var trail = GetNestedArray(flight, "trail").FirstOrDefault() ?? new Dictionary<string, JsonElement>();
 
             return new FlightDto {
                 Id = GetNestedOrDefault(flight, "identification.id", id),
@@ -90,9 +91,9 @@ namespace FlightScraper {
                     Name = GetNested(flight, "airline.short") ?? GetNested(flight, "airline.name")
                 },
                 Metrics = new MetricsDto {
-                    Altitude = Convert.ToDouble(GetNested(trail[0], "alt")),
-                    GroundSpeed = Convert.ToDouble(GetNested(trail[0], "spd")),
-                    Heading = Convert.ToDouble(GetNested(trail[0], "hd"))
+                    Altitude = ToDouble(GetNested(trail, "alt")),
+                    GroundSpeed = ToDouble(GetNested(trail, "spd")),
+                    Heading = ToDouble(GetNested(trail, "hd"))
                 },
                 Route = new RouteDto {
                     Origin = new LocationDto {
@@ -108,17 +109,31 @@ namespace FlightScraper {
                 },
                 Schedule = new ScheduleDto {
                     Departure = new ScheduleTimeDto {
-                        Scheduled = Convert.ToInt64(GetNested(flight, "time.scheduled.departure")),
-                        Estimated = Convert.ToInt64(GetNested(flight, "time.estimated.departure")),
-                        Actual = Convert.ToInt64(GetNested(flight, "time.real.departure")),
+                        Scheduled = ToLong(GetNested(flight, "time.scheduled.departure")),
+                        Estimated = ToLong(GetNested(flight, "time.estimated.departure")),
+                        Actual = ToLong(GetNested(flight, "time.real.departure")),
                     },
                     Arrival = new ScheduleTimeDto {
-                        Scheduled = Convert.ToInt64(GetNested(flight, "time.scheduled.arrival")),
-                        Estimated = Convert.ToInt64(GetNested(flight, "time.estimated.arrival")),
-                        Actual = Convert.ToInt64(GetNested(flight, "time.real.arrival")),
+                        Scheduled = ToLong(GetNested(flight, "time.scheduled.arrival")),
+                        Estimated = ToLong(GetNested(flight, "time.estimated.arrival")),
+                        Actual = ToLong(GetNested(flight, "time.real.arrival")),
                     }
                 }
             };
+        }
+
+        private static long? ToLong(string? input) {
+            if (long.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)) {
+                return result;
+            }
+            return null;
+        }
+
+        private static double? ToDouble(string? input) {
+            if (double.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)) {
+                return result;
+            }
+            return null;
         }
 
         private static string? GetNested(Dictionary<string, JsonElement> data, string path) {

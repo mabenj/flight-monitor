@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace FlightTracker.Controllers {
     [Route("api/[controller]")]
     [ApiController]
-    public class FlightsController(AppDbContext dbContext, CancellationToken ct) : ControllerBase {
+    public class FlightsController(AppDbContext dbContext) : ControllerBase {
         [HttpGet]
-        public async Task<IEnumerable<FlightDto>> GetAllFlights() {
+        public async Task<IEnumerable<FlightDto>> GetAllFlights(CancellationToken ct) {
             var flights = await dbContext.Flights
                 .Include(flight => flight.Aircraft)
                 .Include(flight => flight.Airline)
@@ -21,7 +21,7 @@ namespace FlightTracker.Controllers {
         }
 
         [HttpGet("Active")]
-        public async Task<IEnumerable<FlightDto>> GetActiveFlights() {
+        public async Task<IEnumerable<FlightDto>> GetActiveFlights(CancellationToken ct) {
             var flights = await dbContext.ActiveFlights
                 .Include(af => af.Flight)
                 .Include(af => af.Flight!.Aircraft)
@@ -34,7 +34,7 @@ namespace FlightTracker.Controllers {
         }
 
         [HttpPost("Active")]
-        public async Task SetActiveFlights([FromBody] FlightDto[] activeFlights) {
+        public async Task SetActiveFlights([FromBody] FlightDto[] activeFlights, CancellationToken ct) {
             using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
             try {
                 await UpsertAirlines(activeFlights.Where(f => f.Airline != null).Select(f => f.Airline!));
@@ -51,6 +51,7 @@ namespace FlightTracker.Controllers {
                         .Where(a => !string.IsNullOrWhiteSpace(a.Id))
                         .Select(a => new ActiveFlight { FlightId = a.Id })
                 );
+                await dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
             } catch {
                 await transaction.RollbackAsync(ct);
@@ -76,11 +77,12 @@ namespace FlightTracker.Controllers {
                     ATD = flight.Schedule?.Departure?.Actual,
                     STA = flight.Schedule?.Arrival?.Scheduled,
                     ETA = flight.Schedule?.Arrival?.Estimated,
-                    ATA = flight.Schedule?.Arrival?.Actual
+                    ATA = flight.Schedule?.Arrival?.Actual,
+                    Timestamp = DateTime.UtcNow
                 };
                 if (flight.Aircraft != null) {
                     var aircraft = await dbContext.Aircrafts
-                        .FirstOrDefaultAsync(a => a.Registration == flight.Aircraft!.Registration, ct);
+                        .FirstOrDefaultAsync(a => a.Registration == flight.Aircraft!.Registration);
                     if (aircraft != null) {
                         flightEntity.AircraftId = aircraft.Id;
                     }
@@ -89,8 +91,7 @@ namespace FlightTracker.Controllers {
                     var airline = await dbContext.Airlines
                         .FirstOrDefaultAsync(a =>
                             (a.Icao != null && a.Icao == flight.Airline.Icao)
-                            || (a.Iata != null && a.Iata == flight.Airline.Iata),
-                            ct);
+                            || (a.Iata != null && a.Iata == flight.Airline.Iata));
                     if (airline != null) {
                         flightEntity.AirlineId = airline.Id;
                     }
@@ -99,8 +100,7 @@ namespace FlightTracker.Controllers {
                     var origin = await dbContext.Airports
                         .FirstOrDefaultAsync(a =>
                             (a.Icao != null && a.Icao == flight.Route.Origin.Icao)
-                            || (a.Iata != null && a.Iata == flight.Route.Origin.Iata),
-                            ct);
+                            || (a.Iata != null && a.Iata == flight.Route.Origin.Iata));
                     if (origin != null) {
                         flightEntity.OriginId = origin.Id;
                     }
@@ -109,25 +109,24 @@ namespace FlightTracker.Controllers {
                     var destination = await dbContext.Airports
                         .FirstOrDefaultAsync(a =>
                             (a.Icao != null && a.Icao == flight.Route.Destination.Icao)
-                            || (a.Iata != null && a.Iata == flight.Route.Destination.Iata),
-                            ct);
+                            || (a.Iata != null && a.Iata == flight.Route.Destination.Iata));
                     if (destination != null) {
                         flightEntity.DestinationId = destination.Id;
                     }
                 }
                 var existingFlight = await dbContext.Flights
-                    .FirstOrDefaultAsync(f => f.Id == flight.Id, ct);
+                    .FirstOrDefaultAsync(f => f.Id == flight.Id);
                 if (existingFlight != null) {
-                    dbContext.Flights.Update(flightEntity);
+                    dbContext.Entry(existingFlight).CurrentValues.SetValues(flightEntity);
                 } else {
                     dbContext.Flights.Add(flightEntity);
                 }
             }
-            await dbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync();
         }
 
         private async Task UpsertAirports(IEnumerable<LocationDto> airports) {
-            foreach (var airport in airports) {
+            foreach (var airport in airports.DistinctBy(a => a.Icao ?? a.Iata)) {
                 if (string.IsNullOrWhiteSpace(airport.Icao) && string.IsNullOrWhiteSpace(airport.Iata)) {
                     // No valid identifier
                     continue;
@@ -135,15 +134,12 @@ namespace FlightTracker.Controllers {
                 var existingAirport = await dbContext.Airports
                     .FirstOrDefaultAsync(a =>
                         (a.Icao != null && a.Icao == airport.Icao)
-                        || (a.Iata != null && a.Iata == airport.Iata),
-                        ct);
+                        || (a.Iata != null && a.Iata == airport.Iata));
                 if (existingAirport != null) {
-                    dbContext.Airports.Update(new Airport {
-                        Id = existingAirport.Id,
-                        Icao = airport.Icao ?? existingAirport.Icao,
-                        Iata = airport.Iata ?? existingAirport.Iata,
-                        Name = airport.Name ?? existingAirport.Name
-                    });
+                    existingAirport.Icao = airport.Icao ?? existingAirport.Icao;
+                    existingAirport.Iata = airport.Iata ?? existingAirport.Iata;
+                    existingAirport.Name = airport.Name ?? existingAirport.Name;
+                    dbContext.Airports.Update(existingAirport);
                 } else {
                     dbContext.Airports.Add(new Airport {
                         Icao = airport.Icao,
@@ -153,7 +149,7 @@ namespace FlightTracker.Controllers {
                 }
 
             }
-            await dbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync();
         }
 
         private async Task UpsertAircrafts(IEnumerable<AircraftDto> aircrafts) {
@@ -163,14 +159,11 @@ namespace FlightTracker.Controllers {
                     continue;
                 }
                 var existingAircraft = await dbContext.Aircrafts
-                    .FirstOrDefaultAsync(a => a.Registration == aircraft.Registration, ct);
+                    .FirstOrDefaultAsync(a => a.Registration == aircraft.Registration);
                 if (existingAircraft != null) {
-                    dbContext.Aircrafts.Update(new Aircraft {
-                        Id = existingAircraft.Id,
-                        Registration = existingAircraft.Registration,
-                        ModelCode = aircraft.ModelCode ?? existingAircraft.ModelCode,
-                        ModelText = aircraft.ModelText ?? existingAircraft.ModelText
-                    });
+                    existingAircraft.ModelCode = aircraft.ModelCode ?? existingAircraft.ModelCode;
+                    existingAircraft.ModelText = aircraft.ModelText ?? existingAircraft.ModelText;
+                    dbContext.Aircrafts.Update(existingAircraft);
                 } else {
                     dbContext.Aircrafts.Add(new Aircraft {
                         Registration = aircraft.Registration!,
@@ -180,11 +173,11 @@ namespace FlightTracker.Controllers {
                 }
             }
 
-            await dbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync();
         }
 
         private async Task UpsertAirlines(IEnumerable<AirlineDto> airlines) {
-            foreach (var airline in airlines) {
+            foreach (var airline in airlines.DistinctBy(a => a.Icao ?? a.Iata)) {
                 if (string.IsNullOrWhiteSpace(airline.Icao) && string.IsNullOrWhiteSpace(airline.Iata)) {
                     // No valid identifier
                     continue;
@@ -192,15 +185,12 @@ namespace FlightTracker.Controllers {
                 var existingAirline = await dbContext.Airlines
                     .FirstOrDefaultAsync(a =>
                         (a.Icao != null && a.Icao == airline.Icao)
-                        || (a.Iata != null && a.Iata == airline.Iata),
-                        ct);
+                        || (a.Iata != null && a.Iata == airline.Iata));
                 if (existingAirline != null) {
-                    dbContext.Airlines.Update(new Airline {
-                        Id = existingAirline.Id,
-                        Icao = airline.Icao ?? existingAirline.Icao,
-                        Iata = airline.Iata ?? existingAirline.Iata,
-                        Name = airline.Name ?? existingAirline.Name
-                    });
+                    existingAirline.Icao = airline.Icao ?? existingAirline.Icao;
+                    existingAirline.Iata = airline.Iata ?? existingAirline.Iata;
+                    existingAirline.Name = airline.Name ?? existingAirline.Name;
+                    dbContext.Airlines.Update(existingAirline);
                 } else {
                     dbContext.Airlines.Add(new Airline {
                         Icao = airline.Icao,
@@ -210,7 +200,7 @@ namespace FlightTracker.Controllers {
                 }
             }
 
-            await dbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync();
         }
 
         private static FlightDto MapToDto(Flight flight) {
