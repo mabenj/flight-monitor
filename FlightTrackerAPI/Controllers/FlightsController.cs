@@ -28,6 +28,8 @@ namespace FlightTracker.Controllers {
                 .Include(af => af.Flight!.Airline)
                 .Include(af => af.Flight!.Origin)
                 .Include(af => af.Flight!.Destination)
+                .Include(af => af.Flight!.Bounds)
+                .Where(af => af.Flight!.Bounds != null && af.Flight.Bounds.IsActive)
                 .Select(af => af.Flight!)
                 .ToListAsync(ct);
             return flights.Select(MapToDto);
@@ -60,6 +62,7 @@ namespace FlightTracker.Controllers {
         }
 
         private async Task UpsertFlights(FlightDto[] flights) {
+            var activeBounds = await dbContext.Bounds.FirstOrDefaultAsync(b => b.IsActive);
             foreach (var flight in flights) {
                 if (string.IsNullOrWhiteSpace(flight.Id)) {
                     // No valid identifier
@@ -78,7 +81,8 @@ namespace FlightTracker.Controllers {
                     STA = flight.Schedule?.Arrival?.Scheduled,
                     ETA = flight.Schedule?.Arrival?.Estimated,
                     ATA = flight.Schedule?.Arrival?.Actual,
-                    Timestamp = DateTime.UtcNow
+                    Timestamp = DateTime.UtcNow,
+                    BoundsId = activeBounds?.Id
                 };
                 if (flight.Aircraft != null) {
                     var aircraft = await dbContext.Aircrafts

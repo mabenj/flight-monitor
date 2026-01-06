@@ -16,5 +16,17 @@
             get; set;
         }
 
+        public bool IsActive {
+            get; set;
+        }
+
+        public DateTime? Timestamp {
+            get; set;
+        }
+
+        public int? Id {
+            get; set;
+        }
+
     }
 }

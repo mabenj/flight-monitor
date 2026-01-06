@@ -7,7 +7,7 @@ namespace FlightTrackerClient {
         private readonly JsonSerializerOptions serializerOptions = new() { PropertyNameCaseInsensitive = true };
 
         public async Task<BoundsDto> GetBoundsAsync() {
-            var response = await httpClient.GetStringAsync("/api/bounds");
+            var response = await httpClient.GetStringAsync("/api/bounds/active");
             if (response == null) {
                 throw new Exception("Failed to retrieve bounds from the server.");
             }
