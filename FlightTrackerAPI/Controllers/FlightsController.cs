@@ -212,6 +212,7 @@ namespace FlightTracker.Controllers {
                 Id = flight.Id,
                 FlightNumber = flight.FlightNumber,
                 Callsign = flight.Callsign,
+                LastUpdate = flight.Timestamp,
                 Aircraft = flight.Aircraft == null ? null : new AircraftDto {
                     Registration = flight.Aircraft.Registration,
                     ModelCode = flight.Aircraft.ModelCode,

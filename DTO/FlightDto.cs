@@ -1,4 +1,6 @@
-﻿namespace DTO {
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace DTO {
     public class FlightDto {
         public required string Id {
             get; set;
@@ -24,6 +26,10 @@
             get; set;
         }
         public ScheduleDto? Schedule {
+            get; set;
+        }
+
+        public DateTime? LastUpdate {
             get; set;
         }
     }
