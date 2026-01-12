@@ -4,6 +4,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import { DatabaseSync } from "node:sqlite";
+import { Database } from "./db/database.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -15,11 +16,7 @@ if (process.env.NODE_ENV === "development") {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../public"))); // UI build
 
-const db = new DatabaseSync("db.sqlite");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT);
-  CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, timestamp TEXT, message TEXT);
-`);
+const db = await Database.getDb();
 
 // cron.schedule("*/30 * * * * *", () => {
 //   console.log("30s task");
@@ -30,11 +27,12 @@ db.exec(`
 
 app.get("/api/config", (req: Request, res: Response) => {
   console.log("get config");
-  res.send();
+  res.json({ foo: "bar" });
 });
 app.post("/api/config", (req: Request, res: Response) => {
   console.log("post config", req.body);
   res.send();
 });
 
+process.on("SIGTERM", () => db.close());
 app.listen(PORT, () => console.log(`Server on ${PORT}`));
