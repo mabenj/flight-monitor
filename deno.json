@@ -1,9 +1,9 @@
 {
   "tasks": {
     "dev:server": "deno install && deno run --watch --allow-all main.ts",
-    "dev:ui": "cd ui && deno install && deno run dev",
-    "build:ui": "cd ui && deno install && deno run build",
-    "serve": "deno run build && deno run --allow-all main.ts"
+    "dev:ui": "cd ui && deno install && deno run -A npm:vite",
+    "build:ui": "cd ui && deno install && deno run -A npm:vite build",
+    "serve": "deno run build:ui && deno install && deno run --allow-all main.ts"
   },
   "nodeModulesDir": "auto",
   "imports": {
