@@ -1,0 +1,23 @@
+{
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "types": ["react", "react-dom", "@types/react"],
+    "lib": ["dom", "dom.iterable", "deno.ns"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  },
+  "imports": {
+    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.6",
+    "@types/node": "npm:@types/node@^25.0.8",
+    "@types/react": "npm:@types/react@^19.2.8",
+    "@types/react-dom": "npm:@types/react-dom@^19.2.3",
+    "@vitejs/plugin-react": "npm:@vitejs/plugin-react@^5.1.2",
+    "eslint": "npm:eslint@^9.39.2",
+    "eslint-plugin-react-hooks": "npm:eslint-plugin-react-hooks@^7.0.1",
+    "eslint-plugin-react-refresh": "npm:eslint-plugin-react-refresh@^0.4.26",
+    "globals": "npm:globals@^17.0.0",
+    "react": "npm:react@^19.2.3",
+    "react-dom": "npm:react-dom@^19.2.3",
+    "vite": "npm:vite@^7.3.1"
+  }
+}

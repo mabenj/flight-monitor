@@ -1,9 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "node:fs/promises";
+import * as path from "@std/path";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "./migrations");
 
 export class Database {
@@ -14,9 +12,9 @@ export class Database {
   }
 
   public static async getDb() {
-    const db = new Database();
-    await db.migrate();
-    return db;
+    const database = new Database();
+    await database.migrate();
+    return database.db;
   }
 
   public close() {
@@ -40,9 +38,15 @@ export class Database {
     try {
       this.db.exec("BEGIN TRANSACTION;");
 
-      const files = await fs.readdir(MIGRATIONS_DIR);
-      for (const file of files.filter((file) => file.endsWith(".sql")).sort()) {
-        const version = file.split(".sql")[0]?.split("-")[1];
+      const files: string[] = [];
+      for await (const file of Deno.readDir(MIGRATIONS_DIR)) {
+        if (file.name.endsWith(".sql")) {
+          files.push(file.name);
+        }
+      }
+
+      for (const file of files.sort()) {
+        const version = file.split(".sql")[0]?.split("-")?.at(-1);
         if (version == null) {
           continue;
         }
@@ -50,7 +54,7 @@ export class Database {
           continue;
         }
         const filePath = path.join(MIGRATIONS_DIR, file);
-        const sql = await fs.readFile(filePath, "utf-8");
+        const sql = await Deno.readTextFile(filePath);
         this.db.exec(sql);
       }
       this.db.exec(

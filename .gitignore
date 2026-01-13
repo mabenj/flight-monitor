@@ -1,2 +1,4 @@
 *.env*
+db.sqlite
+dist
 node_modules

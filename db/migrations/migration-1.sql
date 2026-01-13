@@ -3,7 +3,7 @@ CREATE TABLE bounds(
     longitudeMax REAL,
     longitudeMin REAL,
     latitudeMax REAL,
-    latitudeMin REAL
+    latitudeMin REAL,
     label TEXT
 );
 
