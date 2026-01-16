@@ -4,7 +4,7 @@ CREATE TABLE bounds(
     longitudeMin REAL,
     latitudeMax REAL,
     latitudeMin REAL,
-    label TEXT
+    label TEXT UNIQUE
 );
 
 CREATE TABLE aircraft(

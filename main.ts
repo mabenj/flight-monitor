@@ -1,5 +1,11 @@
 import { Application, Router } from "@oak/oak";
 import { Database } from "./db/database.ts";
+import { BoundsService } from "./services/bounds-service.ts";
+import { FlightsService } from "./services/flights-service.ts";
+import { DatabaseSync } from "node:sqlite";
+import { scrapeActiveFlights } from "./tasks/scrape-active-flights.ts";
+import { logFlights } from "./tasks/log-flights.ts";
+import Log from "./lib/log.ts";
 
 async function main() {
   const db = await Database.getDb();
@@ -10,22 +16,50 @@ async function main() {
 
   // API routes
   router.get("/api/bounds", (ctx) => {
-    const bounds = db.prepare("SELECT * FROM bounds").all();
-    ctx.response.body = { bounds };
+    const service = new BoundsService(db);
+    ctx.response.body = service.getAll();
+  });
+  router.get("/api/bounds/:id", (ctx) => {
+    const service = new BoundsService(db);
+    ctx.response.body = service.get(Number(ctx.params.id));
+    if (!ctx.response.body) {
+      ctx.response.status = 404;
+    }
   });
   router.post("/api/bounds", async (ctx) => {
-    const { longitudeMax, longitudeMin, latitudeMax, latitudeMin, label } =
-      await ctx.request.body.json();
-    db.prepare(
-      "INSERT INTO bounds (longitudeMax, longitudeMin, latitudeMax, latitudeMin, label) VALUES (?, ?, ?, ?, ?)"
-    ).run(longitudeMax, longitudeMin, latitudeMax, latitudeMin, label);
-    ctx.response.body = {
-      longitudeMax,
-      longitudeMin,
-      latitudeMax,
-      latitudeMin,
-      label,
-    };
+    const body = await ctx.request.body.json();
+    const service = new BoundsService(db);
+    const [error, bounds] = service.create(body);
+    if (error) {
+      ctx.response.status = 400;
+      ctx.response.body = error;
+    } else {
+      ctx.response.status = 201;
+      ctx.response.body = bounds;
+    }
+  });
+  router.put("/api/bounds/:id", async (ctx) => {
+    const body = await ctx.request.body.json();
+    const service = new BoundsService(db);
+    const [error, bounds] = service.update(Number(ctx.params.id), body);
+    if (error) {
+      ctx.response.status = 400;
+      ctx.response.body = error;
+    } else {
+      ctx.response.status = 201;
+      ctx.response.body = bounds;
+    }
+  });
+  router.get("/api/flights/active", (ctx) => {
+    const service = new FlightsService(db);
+    ctx.response.body = service.getActiveFlights();
+  });
+
+  // Log
+  app.use((ctx, next) => {
+    const logger = new Log("api");
+    logger.info(`${ctx.request.method} ${ctx.request.url}`);
+    return next();
   });
 
   // CORS
@@ -52,9 +86,24 @@ async function main() {
   app.use(router.routes());
   app.use(router.allowedMethods());
 
+  startTasks(db);
+
   const PORT = Number(Deno.env.get("PORT")) || 3001;
   console.log(`Server is running on http://localhost:${PORT}`);
   await app.listen({ port: PORT });
+}
+
+function startTasks(db: DatabaseSync) {
+  const SCRAPE_INTERVAL = 30_000;
+  const LOG_INTERVAL = 1_000;
+
+  setInterval(() => {
+    scrapeActiveFlights(db).catch(console.error);
+  }, SCRAPE_INTERVAL);
+
+  setInterval(() => {
+    logFlights(db);
+  }, LOG_INTERVAL);
 }
 
 if (import.meta.main) {
