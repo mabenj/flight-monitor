@@ -104,25 +104,25 @@ export class FlightsService {
       }
       const existingAirline = this.db
         .prepare("SELECT * FROM airline WHERE icao = ? OR iata = ? LIMIT 1")
-        .get(airline.icao, airline.iata);
+        .get(airline.icao ?? null, airline.iata ?? null);
       if (existingAirline) {
         this.db
           .prepare(
             "UPDATE airline SET name = ?, icao = ?, iata = ? WHERE id = ?"
           )
           .run(
-            existingAirline.name || airline.name?.toString(),
-            existingAirline.icao || airline.icao?.toString(),
-            existingAirline.iata || airline.iata?.toString(),
+            existingAirline.name || airline.name?.toString() || null,
+            existingAirline.icao || airline.icao?.toString() || null,
+            existingAirline.iata || airline.iata?.toString() || null,
             existingAirline.id
           );
       } else {
         this.db
           .prepare("INSERT INTO airline (name, icao, iata) VALUES (?, ?, ?)")
           .run(
-            airline.name?.toString(),
-            airline.icao?.toString(),
-            airline.iata?.toString()
+            airline.name?.toString() ?? null,
+            airline.icao?.toString() ?? null,
+            airline.iata?.toString() ?? null
           );
       }
     }
@@ -139,25 +139,25 @@ export class FlightsService {
       }
       const existingAirport = this.db
         .prepare("SELECT * FROM airport WHERE icao = ? OR iata = ? LIMIT 1")
-        .get(airport.icao, airport.iata);
+        .get(airport.icao ?? null, airport.iata ?? null);
       if (existingAirport) {
         this.db
           .prepare(
             "UPDATE airport SET name = ?, icao = ?, iata = ? WHERE id = ?"
           )
           .run(
-            existingAirport.name || airport.name?.toString(),
-            existingAirport.icao || airport.icao?.toString(),
-            existingAirport.iata || airport.iata?.toString(),
+            existingAirport.name || airport.name?.toString() || null,
+            existingAirport.icao || airport.icao?.toString() || null,
+            existingAirport.iata || airport.iata?.toString() || null,
             existingAirport.id
           );
       } else {
         this.db
           .prepare("INSERT INTO airport (name, icao, iata) VALUES (?, ?, ?)")
           .run(
-            airport.name?.toString(),
-            airport.icao?.toString(),
-            airport.iata?.toString()
+            airport.name?.toString() ?? null,
+            airport.icao?.toString() ?? null,
+            airport.iata?.toString() ?? null
           );
       }
     }
@@ -180,8 +180,12 @@ export class FlightsService {
             "UPDATE aircraft SET modelCode = ?, modelText = ? WHERE id = ?"
           )
           .run(
-            existingAircraft.modelCode || aircraft.modelCode?.toString(),
-            existingAircraft.modelText || aircraft.modelText?.toString(),
+            existingAircraft.modelCode ||
+              aircraft.modelCode?.toString() ||
+              null,
+            existingAircraft.modelText ||
+              aircraft.modelText?.toString() ||
+              null,
             existingAircraft.id
           );
       } else {
@@ -190,9 +194,9 @@ export class FlightsService {
             "INSERT INTO aircraft (modelCode, modelText, registration) VALUES (?, ?, ?)"
           )
           .run(
-            aircraft.modelCode?.toString(),
-            aircraft.modelText?.toString(),
-            aircraft.registration?.toString()
+            aircraft.modelCode?.toString() ?? null,
+            aircraft.modelText?.toString() ?? null,
+            aircraft.registration.toString()
           );
       }
     }
@@ -225,28 +229,33 @@ export class FlightsService {
         aircraftId: toStringOrNull(flight.aircraft?.registration)
           ? this.db
               .prepare("SELECT id FROM aircraft WHERE registration = ? LIMIT 1")
-              .get(flight.aircraft.registration)?.id ?? null
+              .get(flight.aircraft.registration ?? null)?.id ?? null
           : null,
         airlineId: flight.airline
           ? this.db
               .prepare(
                 "SELECT id FROM airline WHERE icao = ? OR iata = ? LIMIT 1"
               )
-              .get(flight.airline.icao, flight.airline.iata)?.id ?? null
+              .get(flight.airline.icao ?? null, flight.airline.iata ?? null)
+              ?.id ?? null
           : null,
         originAirportId: flight.origin
           ? this.db
               .prepare(
                 "SELECT id FROM airport WHERE icao = ? OR iata = ? LIMIT 1"
               )
-              .get(flight.origin.icao, flight.origin.iata)?.id ?? null
+              .get(flight.origin.icao ?? null, flight.origin.iata ?? null)
+              ?.id ?? null
           : null,
         destinationAirportId: flight.destination
           ? this.db
               .prepare(
                 "SELECT id FROM airport WHERE icao = ? OR iata = ? LIMIT 1"
               )
-              .get(flight.destination.icao, flight.destination.iata)?.id ?? null
+              .get(
+                flight.destination.icao ?? null,
+                flight.destination.iata ?? null
+              )?.id ?? null
           : null,
       };
       const existingFlightId = this.db

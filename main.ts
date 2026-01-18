@@ -94,7 +94,7 @@ async function main() {
 }
 
 function startTasks(db: DatabaseSync) {
-  const SCRAPE_INTERVAL = 30_000;
+  const SCRAPE_INTERVAL = 10_000;
   const LOG_INTERVAL = 1_000;
 
   setInterval(() => {
