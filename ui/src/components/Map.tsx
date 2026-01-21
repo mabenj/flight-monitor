@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { useEffect, useRef } from "react";
@@ -41,13 +42,9 @@ export default function Map() {
       performanceMetricsCollection: false,
     });
 
-    const modes = MapboxDraw.modes;
-    // deno-lint-ignore no-explicit-any
-    (modes as any).draw_rectangle = DrawRectangle;
-    drawRef.current = new MapboxDraw({
-      // deno-lint-ignore no-explicit-any
-      modes: modes as any,
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (MapboxDraw.modes as any).draw_rectangle = DrawRectangle;
+    drawRef.current = new MapboxDraw();
     mapRef.current.addControl(drawRef.current);
     drawRef.current.changeMode("draw_rectangle");
 

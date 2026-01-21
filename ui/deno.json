@@ -4,27 +4,14 @@
     "types": ["react", "react-dom", "@types/react", "vite/client"],
     "lib": ["dom", "dom.iterable", "deno.ns"],
     "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "jsxImportSource": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "imports": {
-    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.6",
-    "@mapbox/mapbox-gl-draw": "npm:@mapbox/mapbox-gl-draw@^1.5.1",
-    "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.18",
-    "@types/mapbox-gl": "npm:@types/mapbox-gl@^3.4.1",
-    "@types/mapbox__mapbox-gl-draw": "npm:@types/mapbox__mapbox-gl-draw@^1.4.9",
-    "@types/node": "npm:@types/node@^25.0.8",
-    "@types/react": "npm:@types/react@^19.2.8",
-    "@types/react-dom": "npm:@types/react-dom@^19.2.3",
-    "@vitejs/plugin-react": "npm:@vitejs/plugin-react@^5.1.2",
-    "eslint": "npm:eslint@^9.39.2",
-    "eslint-plugin-react-hooks": "npm:eslint-plugin-react-hooks@^7.0.1",
-    "eslint-plugin-react-refresh": "npm:eslint-plugin-react-refresh@^0.4.26",
-    "globals": "npm:globals@^17.0.0",
-    "mapbox-gl": "npm:mapbox-gl@^3.18.0",
-    "mapbox-gl-draw-rectangle-mode": "npm:mapbox-gl-draw-rectangle-mode@^1.0.4",
-    "react": "npm:react@^19.2.3",
-    "react-dom": "npm:react-dom@^19.2.3",
-    "tailwindcss": "npm:tailwindcss@^4.1.18",
-    "vite": "npm:vite@^7.3.1"
+  "allowScripts": {
+    "allow": ["npm:msw@2.12.7"],
+    "deny": ["npm:esbuild@0.27.2"]
   }
 }
