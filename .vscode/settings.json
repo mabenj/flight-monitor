@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["Aircrafts", "callsign", "mapbox", "mapboxgl"]
+  "cSpell.words": ["Aircrafts", "callsign", "mapbox", "mapboxgl"],
+  "deno.enable": true
 }

@@ -6,6 +6,17 @@ import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import type { Bounds } from "@/types/bounds.ts";
+
+interface Props {
+  bounds: Bounds;
+  onChangeFromMap: (
+    coords: Pick<
+      Bounds,
+      "latitudeMax" | "latitudeMin" | "longitudeMax" | "longitudeMin"
+    >
+  ) => void;
+}
 
 const STYLES = {
   default: "mapbox://styles/mabenj/cmkh9llcn00bc01qudp775fuc",
@@ -13,7 +24,7 @@ const STYLES = {
   satellite: "mapbox://styles/mabenj/cmkh9itbi005b01sf3e9jcwei",
 };
 
-export default function Map() {
+export default function Map({ bounds, onChangeFromMap }: Props) {
   const mapRef = useRef<mapboxgl.Map>(null);
   const drawRef = useRef<MapboxDraw>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -60,13 +71,38 @@ export default function Map() {
   }, []);
 
   return (
-    <>
+    <div className="relative h-64 w-full overflow-hidden rounded-md border border-slate-200 bg-slate-100">
       <div
         ref={mapContainerRef}
         id="map-container"
-        style={{ width: "600px", height: "500px" }}
-        className="border-red-500 border"
+        style={{ width: "100%", height: "100%" }}
       />
-    </>
+      <div className="absolute bottom-3 left-3 w-full flex justify-end pr-8 gap-2">
+        <button
+          type="button"
+          className="rounded bg-white px-2 py-1 text-[11px] text-slate-700 shadow"
+        >
+          Draw rectangle
+        </button>
+        <button
+          type="button"
+          className="rounded bg-white px-2 py-1 text-[11px] text-slate-700 shadow"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          className="rounded bg-white px-2 py-1 text-[11px] text-slate-700 shadow"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
   );
 }
+
+/**<div
+        ref={mapContainerRef}
+        id="map-container"
+        style={{ width: "600px", height: "500px" }}
+      /> */

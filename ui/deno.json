@@ -7,6 +7,8 @@
     "jsxImportSource": "react",
     "baseUrl": ".",
     "paths": {
+      "@/types/*": ["../types/*"],
+      "@/hooks/*": ["./src/hooks/*"],
       "@/*": ["./src/*"]
     }
   },
