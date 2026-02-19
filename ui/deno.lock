@@ -23,6 +23,7 @@
     "npm:next-themes@~0.4.6": "0.4.6_react@19.2.3_react-dom@19.2.3__react@19.2.3",
     "npm:radix-ui@^1.4.3": "1.4.3_@types+react@19.2.9_@types+react-dom@19.2.3__@types+react@19.2.9_react@19.2.3_react-dom@19.2.3__react@19.2.3",
     "npm:react-dom@^19.2.0": "19.2.3_react@19.2.3",
+    "npm:react-router-dom@^7.1.0": "7.13.0_react@19.2.3_react-dom@19.2.3__react@19.2.3",
     "npm:react@^19.2.0": "19.2.3",
     "npm:shadcn@latest": "3.6.3_@babel+core@7.28.6_zod@3.25.76_typescript@5.9.3_@types+node@24.10.9",
     "npm:sonner@^2.0.7": "2.0.7_react@19.2.3_react-dom@19.2.3__react@19.2.3",
@@ -3839,6 +3840,26 @@
         "@types/react"
       ]
     },
+    "react-router-dom@7.13.0_react@19.2.3_react-dom@19.2.3__react@19.2.3": {
+      "integrity": "sha512-5CO/l5Yahi2SKC6rGZ+HDEjpjkGaG/ncEP7eWFTvFxbHP8yeeI0PxTDjimtpXYlR3b3i9/WIL4VJttPrESIf2g==",
+      "dependencies": [
+        "react",
+        "react-dom",
+        "react-router"
+      ]
+    },
+    "react-router@7.13.0_react@19.2.3_react-dom@19.2.3__react@19.2.3": {
+      "integrity": "sha512-PZgus8ETambRT17BUm/LL8lX3Of+oiLaPuVTRH3l1eLvSPpKO3AvhAEb5N7ihAFZQrYDqkvvWfFh9p0z9VsjLw==",
+      "dependencies": [
+        "cookie@1.1.1",
+        "react",
+        "react-dom",
+        "set-cookie-parser"
+      ],
+      "optionalPeers": [
+        "react-dom"
+      ]
+    },
     "react-style-singleton@2.2.3_@types+react@19.2.9_react@19.2.3": {
       "integrity": "sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==",
       "dependencies": [
@@ -3987,6 +4008,9 @@
         "parseurl",
         "send"
       ]
+    },
+    "set-cookie-parser@2.7.2": {
+      "integrity": "sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw=="
     },
     "setprototypeof@1.2.0": {
       "integrity": "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw=="
@@ -4489,6 +4513,7 @@
         "npm:next-themes@~0.4.6",
         "npm:radix-ui@^1.4.3",
         "npm:react-dom@^19.2.0",
+        "npm:react-router-dom@^7.1.0",
         "npm:react@^19.2.0",
         "npm:sonner@^2.0.7",
         "npm:tailwind-merge@^3.4.0",
