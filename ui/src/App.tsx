@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import "./App.css";
 import BoundsList from "@/components/BoundsList.tsx";
-import useBounds from "@/hooks/useBounds.ts";
+import useBounds from "./hooks/useBounds.ts";
 import BoundsDetail from "@/components/BoundsDetail.tsx";
 import type { Bounds } from "@/types/bounds.ts";
 import { Button } from "@/components/ui/button.tsx";

@@ -5,6 +5,14 @@ import { CreateResult } from "../types/create-result.ts";
 export class BoundsService {
   constructor(private readonly db: DatabaseSync) {}
 
+  delete(id: number): { reason: string } | null {
+    const result = this.db.prepare("DELETE FROM bounds WHERE id = ?").run(id);
+    if (result.changes === 0) {
+      return { reason: "Bounds not found" };
+    }
+    return null;
+  }
+
   getAll(): Bounds[] {
     const allBounds = this.db.prepare("SELECT * FROM bounds").all();
     return allBounds.map(this.mapToBounds);
