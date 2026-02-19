@@ -1,6 +1,36 @@
 import { useEffect, useState } from "react";
 import type { Bounds } from "@/types/bounds.ts";
-import Map from "@/components/Map.tsx";
+import Map, { type Point } from "@/components/Map.tsx";
+import { Button } from "./ui/button.tsx";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field.tsx";
+import { Input } from "./ui/input.tsx";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group.tsx";
+import { Badge } from "./ui/badge.tsx";
+import { CopyIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog.tsx";
+import { clamp } from "../lib/utils.ts";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group.tsx";
 
 interface Props {
   bounds: Bounds | null;
@@ -9,93 +39,145 @@ interface Props {
   onDelete: (id: number) => void;
 }
 
-const EMPTY_BOUNDS: Bounds = {
-  id: -1,
-  isActive: false,
-  label: "",
-  latitudeMax: 0,
-  latitudeMin: 0,
-  longitudeMax: 0,
-  longitudeMin: 0,
-};
-
 export default function BoundsDetail({
   bounds,
   isCreating,
   onSave,
   onDelete,
 }: Props) {
-  const [draft, setDraft] = useState<Bounds | null>(
-    isCreating ? EMPTY_BOUNDS : bounds ?? null
-  );
-  const [dirty, setDirty] = useState(false);
+  const [formValues, setFormValues] = useState({
+    label: bounds?.label ?? "",
+    isActive: bounds?.isActive ?? false,
+    north: bounds?.latitudeMax ?? 0,
+    south: bounds?.latitudeMin ?? 0,
+    east: bounds?.longitudeMax ?? 0,
+    west: bounds?.longitudeMin ?? 0,
+    dirty: false,
+  });
+  const [mapDiagonal, setMapDiagonal] = useState<[Point, Point] | null>(null);
+
+  const reset = () => {
+    if (isCreating) {
+      setFormValues({
+        label: "",
+        isActive: false,
+        north: 0,
+        south: 0,
+        east: 0,
+        west: 0,
+        dirty: false,
+      });
+      setMapDiagonal(null);
+    } else {
+      setFormValues({
+        label: bounds?.label ?? "",
+        isActive: bounds?.isActive ?? false,
+        north: bounds?.latitudeMax ?? 0,
+        south: bounds?.latitudeMin ?? 0,
+        east: bounds?.longitudeMax ?? 0,
+        west: bounds?.longitudeMin ?? 0,
+        dirty: false,
+      });
+      if (bounds) {
+        setMapDiagonal([
+          { x: bounds.longitudeMin, y: bounds.latitudeMax },
+          { x: bounds.longitudeMax, y: bounds.latitudeMin },
+        ]);
+      }
+    }
+  };
 
   useEffect(() => {
-    if (isCreating) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDraft(EMPTY_BOUNDS);
-    } else {
-      setDraft(bounds ?? null);
-    }
-    setDirty(false);
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bounds, isCreating]);
 
-  if (!draft) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center text-sm text-slate-500">
-        <p>Select a bounding box from the list or create a new one.</p>
-      </div>
-    );
-  }
-
-  const handleFieldChange = <K extends keyof Bounds>(
+  const handleFieldChange = <K extends keyof typeof formValues>(
     key: K,
-    value: Bounds[K]
+    value: (typeof formValues)[K]
   ) => {
-    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
-    setDirty(true);
-  };
-
-  const handleCoordsChangeFromMap = (coords: {
-    latitudeMax: number;
-    latitudeMin: number;
-    longitudeMax: number;
-    longitudeMin: number;
-  }) => {
-    setDraft((prev) =>
-      prev ? { ...prev, ...coords } : { ...EMPTY_BOUNDS, ...coords }
-    );
-    setDirty(true);
-  };
-
-  const handleDiscard = () => {
-    if (isCreating) {
-      setDraft(EMPTY_BOUNDS);
+    if (key === "north") {
+      setFormValues((prev) => ({
+        ...prev,
+        south: Math.min(prev.south, +value),
+        north: +value,
+        dirty: true,
+      }));
+      setMapDiagonal([
+        { x: formValues.west, y: formValues.south },
+        { x: formValues.east, y: +value },
+      ]);
+    } else if (key === "south") {
+      setFormValues((prev) => ({
+        ...prev,
+        north: Math.max(prev.north, +value),
+        south: +value,
+        dirty: true,
+      }));
+      setMapDiagonal([
+        { x: formValues.west, y: +value },
+        { x: formValues.east, y: formValues.north },
+      ]);
+    } else if (key === "east") {
+      setFormValues((prev) => ({
+        ...prev,
+        west: Math.min(prev.west, +value),
+        east: +value,
+        dirty: true,
+      }));
+      setMapDiagonal([
+        { x: formValues.west, y: formValues.south },
+        { x: +value, y: formValues.north },
+      ]);
+    } else if (key === "west") {
+      setFormValues((prev) => ({
+        ...prev,
+        east: Math.max(prev.east, +value),
+        west: +value,
+        dirty: true,
+      }));
+      setMapDiagonal([
+        { x: +value, y: formValues.south },
+        { x: formValues.east, y: formValues.north },
+      ]);
     } else {
-      setDraft(bounds ?? null);
+      setFormValues((prev) => ({ ...prev, [key]: value, dirty: true }));
     }
-    setDirty(false);
+  };
+
+  const handleMapDiagonalChange = (points: [Point, Point]) => {
+    setMapDiagonal(points);
+    setFormValues((prev) => ({
+      ...prev,
+      north: Math.max(points[0].y, points[1].y),
+      south: Math.min(points[0].y, points[1].y),
+      east: Math.max(points[0].x, points[1].x),
+      west: Math.min(points[0].x, points[1].x),
+      dirty: true,
+    }));
   };
 
   const handleSaveClick = () => {
-    if (!draft.label.trim()) {
+    if (!formValues.label.trim()) {
       return;
     }
     const id = bounds?.id ?? -1;
     const updated: Bounds = {
       id,
-      label: draft.label.trim(),
-      isActive: draft.isActive,
-      latitudeMax: draft.latitudeMax,
-      latitudeMin: draft.latitudeMin,
-      longitudeMax: draft.longitudeMax,
-      longitudeMin: draft.longitudeMin,
+      label: formValues.label.trim(),
+      isActive: formValues.isActive,
+      latitudeMax: formValues.north,
+      latitudeMin: formValues.south,
+      longitudeMax: formValues.east,
+      longitudeMin: formValues.west,
     };
     onSave(updated);
-    setDirty(false);
+    setFormValues((prev) => ({ ...prev, dirty: false }));
   };
 
-  const title = isCreating ? "New bounding box" : draft.label || "Untitled box";
+  const title = isCreating
+    ? "New bounding box"
+    : formValues.label || "Untitled box";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
@@ -103,17 +185,19 @@ export default function BoundsDetail({
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-            {dirty && (
-              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+            {formValues.dirty && (
+              <Badge variant="outline" className="bg-amber-100 text-amber-700">
                 Unsaved changes
-              </span>
+              </Badge>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           {!isCreating && bounds && (
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="outline"
               onClick={() => {
                 const cloned: Bounds = {
                   ...bounds,
@@ -122,25 +206,49 @@ export default function BoundsDetail({
                 };
                 onSave(cloned);
               }}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
             >
-              Clone
-            </button>
+              <CopyIcon /> Clone
+            </Button>
           )}
           {!isCreating && bounds && (
-            <button
-              type="button"
-              onClick={() => onDelete(bounds.id)}
-              className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" size="sm" variant="destructive">
+                  <Trash2Icon /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    this bounding box.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel size="sm" variant="outline">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onDelete(bounds.id)}
+                  >
+                    Yes, delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </header>
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4">
-        <Map bounds={draft} onChangeFromMap={handleCoordsChangeFromMap} />
+        <Map
+          selectedId={bounds?.id ?? null}
+          diagonal={mapDiagonal}
+          onDiagonalChange={handleMapDiagonalChange}
+        />
 
         <form
           className="flex flex-1 flex-col gap-4"
@@ -151,101 +259,97 @@ export default function BoundsDetail({
         >
           <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="space-y-3 rounded-md border border-slate-200 bg-white p-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-slate-700">
-                  Label
-                </label>
-                <input
-                  type="text"
-                  className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  value={draft.label}
-                  onChange={(e) => handleFieldChange("label", e.target.value)}
-                  placeholder="e.g. Helsinki Center"
+              <Field>
+                <FieldLabel htmlFor="label">Label</FieldLabel>
+                <Input
+                  id="label"
                   required
+                  type="text"
+                  placeholder="e.g. Helsinki city center"
+                  value={formValues.label}
+                  onChange={(e) => handleFieldChange("label", e.target.value)}
                 />
-              </div>
+              </Field>
 
-              <fieldset className="space-y-1.5">
-                <legend className="text-xs font-medium text-slate-700">
-                  Active status
-                </legend>
-                <div className="space-y-2 text-xs text-slate-600">
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="radio"
-                      className="mt-0.5"
-                      checked={draft.isActive}
-                      onChange={() => handleFieldChange("isActive", true)}
-                    />
-                    <span>
-                      Set as active bounding box
-                      <span className="block text-[11px] text-slate-500">
+              <FieldSet>
+                <FieldLegend>
+                  <span className="text-sm">Active status</span>
+                </FieldLegend>
+                <RadioGroup
+                  value={formValues.isActive ? "active" : "inactive"}
+                  onValueChange={(val: string) =>
+                    handleFieldChange("isActive", val === "active")
+                  }
+                >
+                  <Field orientation="horizontal">
+                    <RadioGroupItem value="active" id="active" />
+                    <FieldContent>
+                      <FieldLabel htmlFor="active" className="cursor-pointer">
+                        Set as active
+                      </FieldLabel>
+                      <FieldDescription className="text-sm">
                         Only one bounding box can be active at a time.
                         Activating this will deactivate the current one.
-                      </span>
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      className="mt-0.5"
-                      checked={!draft.isActive}
-                      onChange={() => handleFieldChange("isActive", false)}
-                    />
-                    <span>Leave inactive</span>
-                  </label>
-                </div>
-              </fieldset>
+                      </FieldDescription>
+                    </FieldContent>
+                  </Field>
+
+                  <Field orientation="horizontal">
+                    <RadioGroupItem value="inactive" id="inactive" />
+                    <FieldContent>
+                      <FieldLabel htmlFor="inactive" className="cursor-pointer">
+                        Leave inactive
+                      </FieldLabel>
+                    </FieldContent>
+                  </Field>
+                </RadioGroup>
+              </FieldSet>
             </div>
 
             <div className="space-y-3 rounded-md border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-700">
+                <span className="text-sm font-medium text-slate-700">
                   Coordinates
                 </span>
-                <span className="text-[11px] text-slate-500">
-                  Auto-updated from the map.
+                <span className="text-xs text-slate-500">
+                  Auto-updated from the map
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-600">
-                    North
-                  </label>
-                  <input
-                    readOnly
-                    className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
-                    value={draft.latitudeMax.toFixed(5)}
+                  <CoordinateInput
+                    label="° N"
+                    value={formValues.north}
+                    onChange={(e) => handleFieldChange("north", e)}
+                    min={-90}
+                    max={90}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-600">
-                    South
-                  </label>
-                  <input
-                    readOnly
-                    className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
-                    value={draft.latitudeMin.toFixed(5)}
+                  <CoordinateInput
+                    label="° S"
+                    value={formValues.south}
+                    onChange={(e) => handleFieldChange("south", e)}
+                    min={-90}
+                    max={90}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-600">
-                    East
-                  </label>
-                  <input
-                    readOnly
-                    className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
-                    value={draft.longitudeMax.toFixed(5)}
+                  <CoordinateInput
+                    label="° E"
+                    value={formValues.east}
+                    onChange={(e) => handleFieldChange("east", e)}
+                    min={-180}
+                    max={180}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-600">
-                    West
-                  </label>
-                  <input
-                    readOnly
-                    className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
-                    value={draft.longitudeMin.toFixed(5)}
+                  <CoordinateInput
+                    label="° W"
+                    value={formValues.west}
+                    onChange={(e) => handleFieldChange("west", e)}
+                    min={-180}
+                    max={180}
                   />
                 </div>
               </div>
@@ -253,23 +357,98 @@ export default function BoundsDetail({
           </div>
 
           <div className="mt-auto flex justify-between border-t pt-3">
-            <button
-              type="button"
-              onClick={handleDiscard}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-            >
-              Discard
-            </button>
-            <button
-              type="submit"
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-              disabled={!draft.label.trim()}
-            >
-              Save
-            </button>
+            <Button type="button" size="sm" variant="outline" onClick={reset}>
+              <RotateCcwIcon /> Discard
+            </Button>
+            <Button type="submit" size="sm" disabled={!formValues.label.trim()}>
+              <SaveIcon /> Save
+            </Button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
+const CoordinateInput = ({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+}) => {
+  const [stringValue, setStringValue] = useState(value.toFixed(5));
+
+  useEffect(() => {
+    const next = value;
+    if (next.toString() !== stringValue) {
+      setStringValue(next.toFixed(5));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value;
+    let cleaned = raw.replace(/[^0-9.,+-]/g, "");
+    cleaned = cleaned.replace(/,/g, ".");
+    cleaned = cleaned.replace(/(?!^)[+-]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+      const before = cleaned.slice(0, firstDot + 1);
+      const after = cleaned.slice(firstDot + 1).replace(/\./g, "");
+      cleaned = before + after;
+    }
+    setStringValue(cleaned);
+
+    if (!onChange) {
+      return;
+    }
+
+    if (raw.trim() === "") {
+      onChange(0);
+      return;
+    }
+
+    const parsed = Number(raw.replace(",", "."));
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+    onChange(clamp(parsed, min, max));
+  }
+
+  function handleBlur() {
+    if (stringValue.trim() === "") {
+      return;
+    }
+
+    const parsed = Number(stringValue.replace(",", "."));
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+
+    onChange(clamp(parsed, min, max));
+  }
+
+  return (
+    <InputGroup>
+      <InputGroupInput
+        inputMode="decimal"
+        type="text"
+        value={stringValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder="E.g. 60.123"
+        pattern="^[\-\+0-9.,]+$"
+      />
+      <InputGroupAddon align="inline-end">
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </InputGroupAddon>
+    </InputGroup>
+  );
+};
