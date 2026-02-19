@@ -108,8 +108,8 @@ export class BoundsService {
       return { reason: "Label must be between 1 and 50 characters" };
     }
     const duplicateLabel = this.db
-      .prepare("SELECT label FROM bounds WHERE label = ?")
-      .get(bounds.label);
+      .prepare("SELECT label FROM bounds WHERE label = ? AND id != ?")
+      .get(bounds.label, bounds.id);
     if (duplicateLabel) {
       return { reason: "Label must be unique" };
     }
