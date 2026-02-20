@@ -63,18 +63,21 @@ export default function Map({
     rectStateRef.current.isResizing = false;
     rectStateRef.current.anchorPoint = null;
     rectStateRef.current.activeCorner = null;
-    mapRef.current!.getCanvas().style.cursor = "";
-
-    (mapRef.current!.getSource("rect-src") as GeoJSONSource).setData({
-      type: "FeatureCollection",
-      features: [],
-    });
-    (mapRef.current!.getSource("rect-corners-src") as GeoJSONSource).setData({
-      type: "FeatureCollection",
-      features: [],
-    });
-
     onDiagonalChange(null);
+
+    if (!mapRef.current) {
+      return;
+    }
+    mapRef.current.getCanvas().style.cursor = "";
+
+    (mapRef.current.getSource("rect-src") as GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: [],
+    });
+    (mapRef.current.getSource("rect-corners-src") as GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: [],
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
