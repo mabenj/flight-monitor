@@ -5,6 +5,7 @@ import BoundsDetail from "@/components/BoundsDetail.tsx";
 import type { Bounds } from "@/types/bounds.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { SquareStackIcon, PlusIcon } from "lucide-react";
+import { useIpLocation } from "../hooks/useIpLocation.ts";
 
 export default function BoundsPage() {
   const { bounds, createBounds, updateBounds, deleteBounds } = useBounds();
@@ -13,6 +14,7 @@ export default function BoundsPage() {
     () => bounds?.find((b) => b.id === selectedId) ?? null,
     [bounds, selectedId]
   );
+  const ipLocation = useIpLocation();
 
   const handleSave = async (bounds: Bounds) => {
     if (selectedId === "new") {
@@ -64,6 +66,7 @@ export default function BoundsPage() {
             onSave={handleSave}
             onDelete={handleDelete}
             isCreating={selectedId === "new"}
+            ipLocation={ipLocation}
           />
         ) : (
           <div className="flex items-center justify-center flex-1 text-slate-500">

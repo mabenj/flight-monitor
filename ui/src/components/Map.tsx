@@ -8,7 +8,8 @@ import { LocateIcon, SquareDashedIcon, XIcon } from "lucide-react";
 interface Props {
   selectedId: number | null;
   diagonal: [Point, Point] | null;
-  onDiagonalChange: (diagonal: [Point, Point]) => void;
+  onDiagonalChange: (diagonal: [Point, Point] | null) => void;
+  initialLocation?: Point;
 }
 
 const STYLES = {
@@ -33,7 +34,12 @@ type RectangleState = {
 
 type CornerId = "SW" | "SE" | "NE" | "NW";
 
-export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
+export default function Map({
+  selectedId,
+  diagonal,
+  onDiagonalChange,
+  initialLocation,
+}: Props) {
   const mapRef = useRef<mapboxgl.Map>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const rectStateRef = useRef<RectangleState>({
@@ -53,7 +59,8 @@ export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
   }, []);
 
   const clearRectangle = useCallback(() => {
-    rectStateRef.current.isDrawing = true;
+    rectStateRef.current.isDrawing = false;
+    rectStateRef.current.isResizing = false;
     rectStateRef.current.anchorPoint = null;
     rectStateRef.current.activeCorner = null;
     mapRef.current!.getCanvas().style.cursor = "";
@@ -66,6 +73,9 @@ export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
       type: "FeatureCollection",
       features: [],
     });
+
+    onDiagonalChange(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const flyToDiagonal = (diag: [Point, Point] | null, durationMs = 2000) => {
@@ -82,7 +92,7 @@ export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
       [minX, minY],
       [maxX, maxY],
     ] as [[number, number], [number, number]];
-    const padding = 100;
+    const padding = 200;
     mapRef.current!.fitBounds(bounds, { padding, duration: durationMs });
   };
 
@@ -129,6 +139,7 @@ export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
       isNaN(diagonalPoint.x) ||
       isNaN(diagonalPoint.y)
     ) {
+      clearRectangle();
       return;
     }
     rectStateRef.current.anchorPoint = anchorPoint;
@@ -159,12 +170,11 @@ export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
       antialias: true,
       attributionControl: false,
       performanceMetricsCollection: false,
+      center: [initialLocation?.x ?? -0.12, initialLocation?.y ?? 51.5],
+      zoom: 8,
     });
     mapRef.current = map;
-    fetchCurrentLocation().then(({ lat, lon }) => {
-      map.setCenter({ lat, lng: lon });
-      map.setZoom(9);
-    });
+    flyToDiagonal(diagonal, 0);
     map.on("load", () => {
       map.addSource("rect-src", {
         type: "geojson",
@@ -351,12 +361,6 @@ export default function Map({ selectedId, diagonal, onDiagonalChange }: Props) {
       </div>
     </div>
   );
-}
-
-async function fetchCurrentLocation() {
-  const response = await fetch("http://ip-api.com/json");
-  const { lat, lon } = await response.json();
-  return { lat, lon };
 }
 
 function getOppositeCorner(cornerId: CornerId, coordinates: Point[]): Point {

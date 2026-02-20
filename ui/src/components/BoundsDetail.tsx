@@ -37,6 +37,7 @@ interface Props {
   isCreating: boolean;
   onSave: (bounds: Bounds) => void;
   onDelete: (id: number) => void;
+  ipLocation?: { lat: number; lon: number } | null;
 }
 
 export default function BoundsDetail({
@@ -44,27 +45,35 @@ export default function BoundsDetail({
   isCreating,
   onSave,
   onDelete,
+  ipLocation,
 }: Props) {
   const [formValues, setFormValues] = useState({
     label: bounds?.label ?? "",
     isActive: bounds?.isActive ?? false,
-    north: bounds?.latitudeMax ?? 0,
-    south: bounds?.latitudeMin ?? 0,
-    east: bounds?.longitudeMax ?? 0,
-    west: bounds?.longitudeMin ?? 0,
+    north: bounds?.latitudeMax,
+    south: bounds?.latitudeMin,
+    east: bounds?.longitudeMax,
+    west: bounds?.longitudeMin,
     dirty: false,
   });
-  const [mapDiagonal, setMapDiagonal] = useState<[Point, Point] | null>(null);
+  const [mapDiagonal, setMapDiagonal] = useState<[Point, Point] | null>(
+    bounds
+      ? [
+          { x: bounds.longitudeMin, y: bounds.latitudeMax },
+          { x: bounds.longitudeMax, y: bounds.latitudeMin },
+        ]
+      : null
+  );
 
   const reset = () => {
     if (isCreating) {
       setFormValues({
         label: "",
         isActive: false,
-        north: 0,
-        south: 0,
-        east: 0,
-        west: 0,
+        north: undefined,
+        south: undefined,
+        east: undefined,
+        west: undefined,
         dirty: false,
       });
       setMapDiagonal(null);
@@ -72,10 +81,10 @@ export default function BoundsDetail({
       setFormValues({
         label: bounds?.label ?? "",
         isActive: bounds?.isActive ?? false,
-        north: bounds?.latitudeMax ?? 0,
-        south: bounds?.latitudeMin ?? 0,
-        east: bounds?.longitudeMax ?? 0,
-        west: bounds?.longitudeMin ?? 0,
+        north: bounds?.latitudeMax,
+        south: bounds?.latitudeMin,
+        east: bounds?.longitudeMax,
+        west: bounds?.longitudeMin,
         dirty: false,
       });
       if (bounds) {
@@ -99,54 +108,81 @@ export default function BoundsDetail({
     if (key === "north") {
       setFormValues((prev) => ({
         ...prev,
-        south: Math.min(prev.south, +value),
-        north: +value,
+        south: prev.south && value ? Math.min(prev.south, +value) : prev.south,
+        north: value ? +value : undefined,
         dirty: true,
       }));
-      setMapDiagonal([
-        { x: formValues.west, y: formValues.south },
-        { x: formValues.east, y: +value },
-      ]);
+      if (formValues.south && formValues.west && formValues.east && value) {
+        setMapDiagonal([
+          { x: formValues.west, y: formValues.south },
+          { x: formValues.east, y: +value },
+        ]);
+      } else {
+        setMapDiagonal(null);
+      }
     } else if (key === "south") {
       setFormValues((prev) => ({
         ...prev,
-        north: Math.max(prev.north, +value),
-        south: +value,
+        north: prev.north && value ? Math.max(prev.north, +value) : prev.north,
+        south: value ? +value : undefined,
         dirty: true,
       }));
-      setMapDiagonal([
-        { x: formValues.west, y: +value },
-        { x: formValues.east, y: formValues.north },
-      ]);
+      if (formValues.north && formValues.west && formValues.east && value) {
+        setMapDiagonal([
+          { x: formValues.west, y: +value },
+          { x: formValues.east, y: formValues.north },
+        ]);
+      } else {
+        setMapDiagonal(null);
+      }
     } else if (key === "east") {
       setFormValues((prev) => ({
         ...prev,
-        west: Math.min(prev.west, +value),
-        east: +value,
+        west: prev.west && value ? Math.min(prev.west, +value) : prev.west,
+        east: value ? +value : undefined,
         dirty: true,
       }));
-      setMapDiagonal([
-        { x: formValues.west, y: formValues.south },
-        { x: +value, y: formValues.north },
-      ]);
+      if (formValues.north && formValues.south && formValues.west && value) {
+        setMapDiagonal([
+          { x: formValues.west, y: formValues.south },
+          { x: +value, y: formValues.north },
+        ]);
+      } else {
+        setMapDiagonal(null);
+      }
     } else if (key === "west") {
       setFormValues((prev) => ({
         ...prev,
-        east: Math.max(prev.east, +value),
-        west: +value,
+        east: prev.east && value ? Math.max(prev.east, +value) : prev.east,
+        west: value ? +value : undefined,
         dirty: true,
       }));
-      setMapDiagonal([
-        { x: +value, y: formValues.south },
-        { x: formValues.east, y: formValues.north },
-      ]);
+      if (formValues.north && formValues.south && formValues.east && value) {
+        setMapDiagonal([
+          { x: +value, y: formValues.south },
+          { x: formValues.east, y: formValues.north },
+        ]);
+      } else {
+        setMapDiagonal(null);
+      }
     } else {
       setFormValues((prev) => ({ ...prev, [key]: value, dirty: true }));
     }
   };
 
-  const handleMapDiagonalChange = (points: [Point, Point]) => {
+  const handleMapDiagonalChange = (points: [Point, Point] | null) => {
     setMapDiagonal(points);
+    if (!points) {
+      setFormValues((prev) => ({
+        ...prev,
+        north: undefined,
+        south: undefined,
+        east: undefined,
+        west: undefined,
+        dirty: true,
+      }));
+      return;
+    }
     setFormValues((prev) => ({
       ...prev,
       north: Math.max(points[0].y, points[1].y),
@@ -158,7 +194,13 @@ export default function BoundsDetail({
   };
 
   const handleSaveClick = () => {
-    if (!formValues.label.trim()) {
+    if (
+      !formValues.label.trim() ||
+      formValues.north === undefined ||
+      formValues.south === undefined ||
+      formValues.east === undefined ||
+      formValues.west === undefined
+    ) {
       return;
     }
     const id = bounds?.id ?? -1;
@@ -248,6 +290,9 @@ export default function BoundsDetail({
           selectedId={bounds?.id ?? null}
           diagonal={mapDiagonal}
           onDiagonalChange={handleMapDiagonalChange}
+          initialLocation={
+            ipLocation ? { x: ipLocation.lon, y: ipLocation.lat } : undefined
+          }
         />
 
         <form
@@ -378,17 +423,17 @@ const CoordinateInput = ({
   max,
 }: {
   label: string;
-  value: number;
+  value?: number;
   onChange: (value: number) => void;
   min: number;
   max: number;
 }) => {
-  const [stringValue, setStringValue] = useState(value.toFixed(5));
+  const [stringValue, setStringValue] = useState(value?.toFixed(5) ?? "");
 
   useEffect(() => {
     const next = value;
-    if (next.toString() !== stringValue) {
-      setStringValue(next.toFixed(5));
+    if (next?.toString() !== stringValue) {
+      setStringValue(next?.toFixed(5) ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
