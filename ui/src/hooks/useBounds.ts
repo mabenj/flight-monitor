@@ -35,7 +35,12 @@ export default function useBounds() {
         }
       )
       .unwrap();
-    setBounds((prev) => [...(prev ?? []), data]);
+    setBounds((prev) => {
+      if (newBounds.isActive) {
+        prev = prev?.map((p) => ({ ...p, isActive: false })) ?? null;
+      }
+      return prev ? [...prev, data] : [data];
+    });
     return data;
   };
 
@@ -61,7 +66,12 @@ export default function useBounds() {
       )
       .unwrap();
     setBounds(
-      (prev) => prev?.map((b) => (b.id === data.id ? data : b)) ?? null
+      (prev) =>
+        prev?.map((p) =>
+          p.id === data.id
+            ? data
+            : { ...p, isActive: p.isActive && !data.isActive }
+        ) ?? null
     );
     return data;
   };

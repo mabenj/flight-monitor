@@ -42,7 +42,6 @@ export default function BoundsPage() {
 
         <div className="px-4 pb-3">
           <Button
-            variant="outline"
             size="sm"
             onClick={() => setSelectedId("new")}
             className="w-full justify-center"
