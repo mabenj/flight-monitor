@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Flight } from "@types/flight.ts";
+import type { Flight } from "@/types/flight.ts";
 import { toast } from "sonner";
 
 interface UseActiveFlightsReturn {
@@ -21,9 +21,24 @@ export default function useActiveFlights(): UseActiveFlightsReturn {
       const response = await fetch("/api/flights/active");
       if (!response.ok) throw new Error(response.statusText);
       const data = await response.json();
-      setFlights(data);
+      setFlights(
+        data.sort((a: Flight, b: Flight) => {
+          const depA =
+            a.departureTime?.scheduled ||
+            a.departureTime?.actual ||
+            a.departureTime?.estimated ||
+            0;
+          const depB =
+            b.departureTime?.scheduled ||
+            b.departureTime?.actual ||
+            b.departureTime?.estimated ||
+            0;
+          return depB - depA;
+        })
+      );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch flights";
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch flights";
       setError(message);
       toast.error(message);
     } finally {
