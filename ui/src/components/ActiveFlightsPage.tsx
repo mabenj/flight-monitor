@@ -4,11 +4,13 @@ import { prettyNumber } from "../lib/utils.ts";
 
 function formatTime(timestamp: number | undefined): string {
   if (!timestamp) return "";
-  return new Date(timestamp * 1000).toLocaleTimeString("en-US", {
+  const time = new Date(timestamp * 1000).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "UTC",
   });
+  return time + "Z";
 }
 
 function formatAltitude(alt: number): string {
