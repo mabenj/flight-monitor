@@ -37,6 +37,7 @@ interface Props {
   isCreating: boolean;
   onSave: (bounds: Bounds) => void;
   onDelete: (id: number) => void;
+  onClone: () => void;
   ipLocation?: { lat: number; lon: number } | null;
 }
 
@@ -46,6 +47,7 @@ export default function BoundsDetail({
   onSave,
   onDelete,
   ipLocation,
+  onClone,
 }: Props) {
   const [formValues, setFormValues] = useState({
     label: bounds?.label ?? "",
@@ -236,19 +238,7 @@ export default function BoundsDetail({
         </div>
         <div className="flex items-center gap-2">
           {!isCreating && bounds && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const cloned: Bounds = {
-                  ...bounds,
-                  label: `${bounds.label} copy`,
-                  isActive: false,
-                };
-                onSave(cloned);
-              }}
-            >
+            <Button type="button" size="sm" variant="outline" onClick={onClone}>
               <CopyIcon /> Clone
             </Button>
           )}
@@ -402,10 +392,20 @@ export default function BoundsDetail({
           </div>
 
           <div className="mt-auto flex justify-between border-t pt-3">
-            <Button type="button" size="sm" variant="outline" onClick={reset}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={reset}
+              disabled={!formValues.dirty}
+            >
               <RotateCcwIcon /> Discard
             </Button>
-            <Button type="submit" size="sm" disabled={!formValues.label.trim()}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!formValues.label.trim() || !formValues.dirty}
+            >
               <SaveIcon /> Save
             </Button>
           </div>

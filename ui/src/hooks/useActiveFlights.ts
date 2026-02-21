@@ -21,21 +21,7 @@ export default function useActiveFlights(): UseActiveFlightsReturn {
       const response = await fetch("/api/flights/active");
       if (!response.ok) throw new Error(response.statusText);
       const data = await response.json();
-      setFlights(
-        data.sort((a: Flight, b: Flight) => {
-          const depA =
-            a.departureTime?.scheduled ||
-            a.departureTime?.actual ||
-            a.departureTime?.estimated ||
-            0;
-          const depB =
-            b.departureTime?.scheduled ||
-            b.departureTime?.actual ||
-            b.departureTime?.estimated ||
-            0;
-          return depB - depA;
-        })
-      );
+      setFlights(sortFlights(data));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch flights";
@@ -53,4 +39,18 @@ export default function useActiveFlights(): UseActiveFlightsReturn {
   }, []);
 
   return { flights, loading, error, refresh: fetchFlights };
+}
+
+function sortFlights(flights: Flight[], now: number = Date.now()): Flight[] {
+  return [...flights].sort((a, b) => {
+    const aDep = a.departureTime.scheduled;
+    const aArr = a.arrivalTime.scheduled;
+    const bDep = b.departureTime.scheduled;
+    const bArr = b.arrivalTime.scheduled;
+
+    const aClosest = Math.min(Math.abs(aDep - now), Math.abs(aArr - now));
+    const bClosest = Math.min(Math.abs(bDep - now), Math.abs(bArr - now));
+
+    return aClosest - bClosest;
+  });
 }

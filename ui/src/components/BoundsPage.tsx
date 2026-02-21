@@ -34,6 +34,18 @@ export default function BoundsPage() {
     }
   };
 
+  const handleClone = async () => {
+    if (selected && selectedId !== "new") {
+      const newBounds = await createBounds({
+        ...selected,
+        label: `${selected.label} (Copy)`,
+        isActive: false,
+        id: -1,
+      });
+      setSelectedId(newBounds.id);
+    }
+  };
+
   return (
     <main className="flex min-h-0 flex-1">
       <aside className="flex w-90 min-w-[18rem] flex-col border-r bg-white">
@@ -65,6 +77,7 @@ export default function BoundsPage() {
             bounds={selected}
             onSave={handleSave}
             onDelete={handleDelete}
+            onClone={handleClone}
             isCreating={selectedId === "new"}
             ipLocation={ipLocation}
           />

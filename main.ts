@@ -106,15 +106,15 @@ async function main() {
 
 function startTasks(db: DatabaseSync) {
   const SCRAPE_INTERVAL = 10_000;
-  const LOG_INTERVAL = 1_000;
+  //   const LOG_INTERVAL = 1_000;
 
   setInterval(() => {
     scrapeActiveFlights(db).catch(console.error);
   }, SCRAPE_INTERVAL);
 
-  setInterval(() => {
-    logFlights(db);
-  }, LOG_INTERVAL);
+  //   setInterval(() => {
+  //     logFlights(db);
+  //   }, LOG_INTERVAL);
 }
 
 if (import.meta.main) {
