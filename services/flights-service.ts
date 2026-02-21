@@ -23,12 +23,10 @@ export class FlightsService {
             d.name as destinationName
         FROM activeFlight AS af
         JOIN flight AS f ON af.flightId = f.id
-        JOIN bounds AS b ON f.boundsId = b.id
         LEFT JOIN aircraft AS a ON f.aircraftId = a.id
         LEFT JOIN airline as al ON f.airlineId = al.id
         LEFT JOIN airport as o ON f.originAirportId = o.id
         LEFT JOIN airport as d ON f.destinationAirportId = d.id
-        WHERE b.isActive = 1
     `;
     const rows = this.db.prepare(sql).all();
     return rows.map((row) => ({

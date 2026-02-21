@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { getNested, getNestedOrDefault } from "../lib/utils.ts";
+import { getNested, getNestedOrDefault, sleep } from "../lib/utils.ts";
 import { Bounds } from "../types/bounds.ts";
 import { Flight } from "../types/flight.ts";
 import { BoundsService } from "../services/bounds-service.ts";
@@ -48,28 +48,59 @@ export async function scrapeActiveFlights(db: DatabaseSync) {
     logger.info("No active bounds found");
     return;
   }
-  const flights = await getFlights(bounds);
-  logger.info(`Found ${flights.length} active flights`);
+  const flights = await getFlights(bounds, logger);
   flightsService.setActiveFlights(flights);
 }
 
-async function getFlights(bounds: Bounds): Promise<Flight[]> {
+async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
   const url = new URL(REALTIME_FLIGHTS_URL);
   url.searchParams.append("bounds", boundsToString(bounds));
   Object.entries(REALTIME_FLIGHTS_PARAMS).forEach(([key, value]) => {
     url.searchParams.append(key, value.toString());
   });
+  logger.debug(`Fetching flights from bounds '${bounds.label}'`);
   const response = await fetch(url.toString(), { headers: HEADERS });
+  if (!response.headers.get("content-type")?.includes("application/json")) {
+    logger.error(
+      `Unexpected content type: ${response.headers.get(
+        "content-type"
+      )} with status ${response.status} (${
+        response.statusText
+      }) from ${url.toString()}`
+    );
+    return [];
+  }
   const data: Record<string, unknown> = await response.json();
+  const keys = Object.keys(data).filter(
+    (key) => key !== "full_count" && key !== "version" && key !== "stats"
+  );
+  logger.debug(`Found ${keys.length} flights in the response`);
   const flights: Flight[] = [];
-  for (const [key, _] of Object.entries(data)) {
-    if (key === "full_count" || key === "version" || key === "stats") {
+  for (const key of keys) {
+    const detailsResponse = await fetch(`${FLIGHT_DETAILS_URL}${key}`, {
+      headers: {
+        ...HEADERS,
+      },
+    });
+    if (
+      !detailsResponse.headers.get("content-type")?.includes("application/json")
+    ) {
+      logger.error(
+        `Unexpected content type: ${detailsResponse.headers.get(
+          "content-type"
+        )} with status ${detailsResponse.status} (${
+          detailsResponse.statusText
+        }) from ${FLIGHT_DETAILS_URL}${key}`
+      );
       continue;
     }
-    const flight = await fetch(`${FLIGHT_DETAILS_URL}${key}`, {
-      headers: HEADERS,
-    }).then((res) => res.json());
+    const flight = await detailsResponse.json();
+    if (!flight) {
+      logger.error(`Failed to deserialize flight details for flight ${key}`);
+      continue;
+    }
     flights.push(parseFlight(key, flight));
+    await sleep(200);
   }
 
   return flights;
