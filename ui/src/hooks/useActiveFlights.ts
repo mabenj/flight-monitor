@@ -1,12 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Flight } from "@/types/flight.ts";
+import { usePageVisibility } from "./usePageVisibility.ts";
 
 export default function useActiveFlights() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isPageVisible = usePageVisibility();
+  const isPageVisibleRef = useRef(isPageVisible);
 
-  const fetchFlights = async () => {
+  useEffect(() => {
+    isPageVisibleRef.current = isPageVisible;
+  }, [isPageVisible]);
+
+  const fetchFlights = async (force?: boolean) => {
+    if (!isPageVisibleRef.current && !force) return;
     try {
       setLoading(true);
       const response = await fetch("/api/flights/active");
@@ -27,7 +35,7 @@ export default function useActiveFlights() {
   };
 
   useEffect(() => {
-    fetchFlights();
+    fetchFlights(true);
     const interval = setInterval(fetchFlights, 5000);
     return () => clearInterval(interval);
   }, []);
