@@ -1,71 +1,57 @@
-import { useMemo, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link,
+  useLocation,
+} from "react-router-dom";
 import "./App.css";
-import BoundsList from "@/components/BoundsList.tsx";
-import useBounds from "@/hooks/useBounds.ts";
-import BoundsDetail from "@/components/BoundsDetail.tsx";
-import type { Bounds } from "@/types/bounds.ts";
+import ActiveFlightsPage from "./components/ActiveFlightsPage.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { SquareStackIcon, Plane } from "lucide-react";
+import BoundsPage from "./components/BoundsPage.tsx";
 
-function App() {
-  const { bounds, createBounds, updateBounds, deleteBounds } = useBounds();
-  const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
-  const selected = useMemo(
-    () => bounds?.find((b) => b.id === selectedId) ?? null,
-    [bounds, selectedId]
+function Navigation() {
+  const location = useLocation();
+  const isFlights = location.pathname === "/";
+  const isBounds = location.pathname === "/bounds";
+
+  return (
+    <nav className="flex gap-2">
+      <Link to="/" aria-current={isFlights ? "page" : undefined}>
+        <Button variant={isFlights ? "default" : "ghost"} size="sm">
+          <Plane className="size-4 mr-2" /> Active flights
+        </Button>
+      </Link>
+      <Link to="/bounds" aria-current={isBounds ? "page" : undefined}>
+        <Button variant={isBounds ? "default" : "ghost"} size="sm">
+          <SquareStackIcon className="size-4 mr-2" /> Bounding boxes
+        </Button>
+      </Link>
+    </nav>
   );
+}
 
-  const handleSave = async (bounds: Bounds) => {
-    if (selectedId === "new") {
-      const newBounds = await createBounds(bounds);
-      setSelectedId(newBounds.id);
-    } else {
-      await updateBounds(bounds);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (selectedId === "new") {
-      setSelectedId(null);
-    } else {
-      await deleteBounds(id);
-      setSelectedId(null);
-    }
-  };
-
+function AppContent() {
   return (
     <div className="flex h-dvh flex-col bg-slate-50">
       <header className="flex items-center justify-between border-b bg-white px-6 py-3">
         <h1 className="text-lg font-semibold text-slate-900">Flight Tracker</h1>
-        <Button onClick={() => setSelectedId("new")}>New bounding box</Button>
+        <Navigation />
       </header>
 
-      <main className="flex min-h-0 flex-1">
-        <aside className="flex w-80 min-w-[18rem] flex-col border-r bg-white">
-          <div className="flex items-center justify-between px-4 py-3">
-            <h2 className="text-sm font-medium text-slate-900">
-              Bounding boxes
-            </h2>
-          </div>
-
-          <BoundsList
-            bounds={bounds}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onDelete={deleteBounds}
-          />
-        </aside>
-
-        <section className="flex min-w-0 flex-1 flex-col">
-          <BoundsDetail
-            bounds={selected}
-            isCreating={selectedId === "new"}
-            onSave={handleSave}
-            onDelete={handleDelete}
-          />
-        </section>
-      </main>
+      <Routes>
+        <Route path="/" element={<ActiveFlightsPage />} />
+        <Route path="/bounds" element={<BoundsPage />} />
+      </Routes>
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+}

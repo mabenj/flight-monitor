@@ -1,21 +1,21 @@
 import type { Bounds } from "@/types/bounds.ts";
 import { Spinner } from "@/components/ui/spinner.tsx";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
 
 interface Props {
   bounds: Bounds[] | null;
   selectedId: number | "new" | null;
   onSelect: (id: number) => void;
-  onDelete: (id: number) => void;
 }
 
-export default function BoundsList({
-  bounds,
-  selectedId,
-  onSelect,
-  onDelete,
-}: Props) {
+export default function BoundsList({ bounds, selectedId, onSelect }: Props) {
   if (!bounds) {
-    // Loading state
     return (
       <div className="flex flex-1 gap-2 items-center justify-center px-4 text-center text-xs text-slate-500">
         <Spinner />
@@ -37,55 +37,42 @@ export default function BoundsList({
 
   return (
     <div className="flex-1 overflow-y-auto px-2 pb-2">
-      <ul className="space-y-1">
+      <ul className="space-y-3">
         {bounds.map((bound) => {
           const isSelected = bound.id === selectedId;
           return (
             <li key={bound.id}>
-              <div
-                onClick={() => onSelect(bound.id)}
-                className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-xs transition ${
+              <Item
+                variant="outline"
+                className={`cursor-pointer ${
                   isSelected
-                    ? "border-blue-200 bg-blue-50"
-                    : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                    ? "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800"
+                    : "hover:bg-accent dark:hover:bg-accent"
                 }`}
+                onClick={() => onSelect(bound.id)}
               >
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-medium text-slate-900">
-                      {bound.label}
-                    </span>
-                    {bound.isActive && (
-                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-                        Active
-                      </span>
-                    )}
-                    {!bound.isActive && (
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
-                        Inactive
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                <ItemContent>
+                  <ItemTitle>
+                    <div className="flex items-center gap-2">
+                      <span>{bound.label}</span>
+                      {bound.isActive && (
+                        <Badge
+                          variant="outline"
+                          className="bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800"
+                        >
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                  </ItemTitle>
+                  <ItemDescription className="text-xs">
                     N {bound.latitudeMax.toFixed(3)} · S{" "}
                     {bound.latitudeMin.toFixed(3)} · E{" "}
                     {bound.longitudeMax.toFixed(3)} · W{" "}
                     {bound.longitudeMin.toFixed(3)}
-                  </p>
-                </div>
-                <div className="ml-2 flex flex-col items-end gap-1">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(bound.id);
-                    }}
-                    className="rounded p-1 text-[10px] text-slate-400 hover:bg-red-50 hover:text-red-500"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
             </li>
           );
         })}

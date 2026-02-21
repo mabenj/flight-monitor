@@ -50,6 +50,17 @@ async function main() {
       ctx.response.body = bounds;
     }
   });
+  router.delete("/api/bounds/:id", (ctx) => {
+    const service = new BoundsService(db);
+    const error = service.delete(Number(ctx.params.id));
+    if (error) {
+      ctx.response.status = 400;
+      ctx.response.body = error;
+    } else {
+      ctx.response.status = 204;
+    }
+  });
+
   router.get("/api/flights/active", (ctx) => {
     const service = new FlightsService(db);
     ctx.response.body = service.getActiveFlights();
@@ -95,15 +106,15 @@ async function main() {
 
 function startTasks(db: DatabaseSync) {
   const SCRAPE_INTERVAL = 10_000;
-  const LOG_INTERVAL = 1_000;
+  //   const LOG_INTERVAL = 1_000;
 
   setInterval(() => {
     scrapeActiveFlights(db).catch(console.error);
   }, SCRAPE_INTERVAL);
 
-  setInterval(() => {
-    logFlights(db);
-  }, LOG_INTERVAL);
+  //   setInterval(() => {
+  //     logFlights(db);
+  //   }, LOG_INTERVAL);
 }
 
 if (import.meta.main) {
