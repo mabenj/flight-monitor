@@ -1,6 +1,8 @@
 import useActiveFlights from "@/hooks/useActiveFlights.ts";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { prettyNumber } from "../lib/utils.ts";
+import useBounds from "../hooks/useBounds.ts";
+import { useMemo } from "react";
 
 function formatTime(timestamp: number | undefined): string {
   if (!timestamp) return "";
@@ -20,9 +22,19 @@ function formatAltitude(alt: number): string {
 }
 
 export default function ActiveFlightsPage() {
-  const { flights, loading } = useActiveFlights();
+  const { flights, loading, error } = useActiveFlights();
+  const { bounds } = useBounds();
+  const activeBounds = useMemo(() => bounds?.find((b) => b.isActive), [bounds]);
 
-  if (loading && flights.length === 0) {
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full text-slate-500">
+        {error}
+      </div>
+    );
+  }
+
+  if (loading && flights.length === 0 && !error) {
     return (
       <div className="flex items-center justify-center h-full">
         <Spinner />
@@ -33,7 +45,19 @@ export default function ActiveFlightsPage() {
   return (
     <div className="flex flex-col p-4 h-full overflow-auto">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">Active flights</h2>
+        <div className="flex items-center gap-2">
+          <div className="text-lg font-semibold text-slate-900">
+            Active flights
+          </div>
+          {activeBounds && (
+            <>
+              <span className="text-slate-400">|</span>
+              <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
+                {activeBounds.label}
+              </span>
+            </>
+          )}
+        </div>
         <p className="text-sm text-slate-500">{flights.length} flights</p>
       </div>
 
@@ -47,10 +71,10 @@ export default function ActiveFlightsPage() {
             <thead className="border-b bg-slate-50">
               <tr>
                 <Th>Flight #</Th>
+                <Th>Callsign</Th>
                 <Th>Airline</Th>
                 <Th>From</Th>
                 <Th>To</Th>
-                <Th>Callsign</Th>
                 <Th>Aircraft</Th>
                 <Th>Registration</Th>
                 <Th center>Alt.</Th>
@@ -67,6 +91,7 @@ export default function ActiveFlightsPage() {
                   className="border-b hover:bg-slate-50 transition-colors"
                 >
                   <Td bold>{flight.flightNumber}</Td>
+                  <Td>{flight.callsign}</Td>
                   <Td title={flight.airline?.icao}>{flight.airline?.name}</Td>
                   <Td>
                     {flight.origin?.name ? (
@@ -92,7 +117,6 @@ export default function ActiveFlightsPage() {
                       <NA />
                     )}
                   </Td>
-                  <Td>{flight.callsign}</Td>
                   <Td title={flight.aircraft.modelCode}>
                     {flight.aircraft?.modelText}
                   </Td>
