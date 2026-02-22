@@ -57,6 +57,7 @@ export class BoundsService {
         ).lastInsertRowid;
       if (bounds.isActive) {
         this.db.prepare("UPDATE bounds SET isActive = 0 WHERE id != ?").run(id);
+        this.db.prepare("DELETE FROM activeFlight;").run();
       }
       this.db.exec("COMMIT;");
       return [null, this.get(Number(id))!];
@@ -88,6 +89,7 @@ export class BoundsService {
         );
       if (bounds.isActive) {
         this.db.prepare("UPDATE bounds SET isActive = 0 WHERE id != ?").run(id);
+        this.db.prepare("DELETE FROM activeFlight;").run();
       }
       this.db.exec("COMMIT;");
       return [null, this.get(id)!];

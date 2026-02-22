@@ -49,6 +49,13 @@ export async function scrapeActiveFlights(db: DatabaseSync) {
     return;
   }
   const flights = await getFlights(bounds, logger);
+  const activeBoundsId = boundsService.getActive()?.id;
+  if (activeBoundsId !== bounds.id) {
+    logger.info(
+      "Active bounds changed during flight retrieval, skipping update"
+    );
+    return;
+  }
   flightsService.setActiveFlights(flights);
 }
 
