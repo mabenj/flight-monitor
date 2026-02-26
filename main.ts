@@ -4,12 +4,15 @@ import { BoundsService } from "./services/bounds-service.ts";
 import { FlightsService } from "./services/flights-service.ts";
 import { DatabaseSync } from "node:sqlite";
 import { scrapeActiveFlights } from "./tasks/scrape-active-flights.ts";
-import { logFlights } from "./tasks/log-flights.ts";
 import Log from "./lib/log.ts";
+import { MatrixClient } from "./rgb-matrix/matrix.ts";
 
 async function main() {
   const db = await Database.getDb();
-  Deno.addSignalListener("SIGINT", () => db.close());
+  Deno.addSignalListener("SIGINT", async () => {
+    db.close();
+    await MatrixClient.getInstance().close();
+  });
 
   const app = new Application();
   const router = new Router();
@@ -106,15 +109,9 @@ async function main() {
 
 function startTasks(db: DatabaseSync) {
   const SCRAPE_INTERVAL = 30_000;
-  //   const LOG_INTERVAL = 1_000;
-
   setInterval(() => {
     scrapeActiveFlights(db).catch(console.error);
   }, SCRAPE_INTERVAL);
-
-  //   setInterval(() => {
-  //     logFlights(db);
-  //   }, LOG_INTERVAL);
 }
 
 if (import.meta.main) {
