@@ -12,10 +12,10 @@ let running = false;
 
 async function main() {
   const logger = new Log("main");
-  logger.info("Shutting down...");
 
   const db = await Database.getDb();
   Deno.addSignalListener("SIGINT", async () => {
+    logger.info("Shutting down...");
     db.isOpen && db.close();
     await MatrixClient.getInstance().close();
     running = false;
