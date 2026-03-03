@@ -13,7 +13,8 @@ export type TextCmd = {
 export type BrightnessCmd = { cmd: "brightness"; value: number };
 export type ClearCmd = { cmd: "clear" };
 export type ExitCmd = { cmd: "exit" };
-export type MatrixCmd = TextCmd | BrightnessCmd | ClearCmd | ExitCmd;
+export type FlushCmd = { cmd: "flush" };
+export type MatrixCmd = TextCmd | BrightnessCmd | ClearCmd | ExitCmd | FlushCmd;
 export type ReadyMsg = { ready: true; font?: boolean };
 
 export class MatrixClient {
@@ -66,6 +67,10 @@ export class MatrixClient {
 
   clear() {
     return this.send({ cmd: "clear" });
+  }
+
+  flush() {
+    return this.send({ cmd: "flush" });
   }
 
   async close() {

@@ -6,8 +6,8 @@ ROWS = 32
 COLS = 64
 CHAIN = 1
 PARALLEL = 1
-GPIO_SLOWDOWN = 0
-FONT_PATH = "./fonts/7x13.bdf"
+GPIO_SLOWDOWN = 1
+FONT_PATH = "./fonts/5x7.bdf"
 HARDWARE_MAPPING = "adafruit-hat"
 
 def make_matrix():
@@ -43,7 +43,7 @@ def redraw_text(payload: dict):
     r = int(payload.get("r", 255))
     g = int(payload.get("g", 255))
     b = int(payload.get("b", 255))
-    clear = bool(payload.get("clear", True))
+    clear = bool(payload.get("clear", False))
 
     if clear:
         off.Clear()
@@ -51,8 +51,6 @@ def redraw_text(payload: dict):
     if text and font:
         color = graphics.Color(r, g, b)
         graphics.DrawText(off, font, x, y, color, text)
-
-    off = matrix.SwapOnVSync(off) 
 
 def set_brightness(payload: dict):
     matrix.brightness = int(payload.get("value", 50))
@@ -65,12 +63,10 @@ def set_pixels(payload: dict):
     for p in payload.get("pixels", []):
         x, y, r, g, b = p
         off.SetPixel(int(x), int(y), int(r), int(g), int(b))
-    off = matrix.SwapOnVSync(off)
 
 def do_clear():
     global off
     off.Clear()
-    off = matrix.SwapOnVSync(off)
     
 for line in sys.stdin:
     line = line.strip()
@@ -93,6 +89,8 @@ for line in sys.stdin:
             set_pixels(msg)
         elif cmd == "clear":
             do_clear()
+        elif cmd == "flush":
+            off = matrix.SwapOnVSync(off)
         elif cmd == "exit":
             do_clear()
             break

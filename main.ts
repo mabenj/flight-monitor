@@ -6,12 +6,16 @@ import { DatabaseSync } from "node:sqlite";
 import { scrapeActiveFlights } from "./tasks/scrape-active-flights.ts";
 import Log from "./lib/log.ts";
 import { MatrixClient } from "./rgb-matrix/matrix.ts";
+import { displayFlights } from "./tasks/display-flights.ts";
+
+let running = false;
 
 async function main() {
   const db = await Database.getDb();
   Deno.addSignalListener("SIGINT", async () => {
     db.close();
     await MatrixClient.getInstance().close();
+    running = false;
   });
 
   const app = new Application();
@@ -104,6 +108,7 @@ async function main() {
 
   const PORT = Number(Deno.env.get("PORT")) || 3001;
   console.log(`Server is running on http://localhost:${PORT}`);
+  running = true;
   await app.listen({ port: PORT });
 }
 
@@ -112,6 +117,15 @@ function startTasks(db: DatabaseSync) {
   setInterval(() => {
     scrapeActiveFlights(db).catch(console.error);
   }, SCRAPE_INTERVAL);
+
+  const callDisplayFlights = async () => {
+    if (!running) {
+      return;
+    }
+    await displayFlights(db).catch(console.error);
+    setTimeout(callDisplayFlights);
+  };
+  callDisplayFlights();
 }
 
 if (import.meta.main) {
