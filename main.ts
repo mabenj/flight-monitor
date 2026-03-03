@@ -16,9 +16,9 @@ async function main() {
   const db = await Database.getDb();
   Deno.addSignalListener("SIGINT", async () => {
     logger.info("Shutting down...");
+    running = false;
     db.isOpen && db.close();
     await MatrixClient.getInstance().close();
-    running = false;
   });
 
   const app = new Application();
@@ -117,8 +117,11 @@ async function main() {
 
 function startTasks(db: DatabaseSync) {
   const SCRAPE_INTERVAL = 30_000;
-  setInterval(() => {
-    scrapeActiveFlights(db).catch(console.error);
+  const scrapeIntervalId = setInterval(async () => {
+    await scrapeActiveFlights(db).catch(console.error);
+    if (!running) {
+      clearInterval(scrapeIntervalId);
+    }
   }, SCRAPE_INTERVAL);
 
   const callSendFlightsToMatrix = async () => {
