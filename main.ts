@@ -6,14 +6,17 @@ import { DatabaseSync } from "node:sqlite";
 import { scrapeActiveFlights } from "./tasks/scrape-active-flights.ts";
 import Log from "./lib/log.ts";
 import { MatrixClient } from "./rgb-matrix/matrix.ts";
-import { displayFlights } from "./tasks/display-flights.ts";
+import { sendFlightsToMatrix } from "./tasks/send-flights-to-matrix.ts";
 
 let running = false;
 
 async function main() {
+  const logger = new Log("main");
+  logger.info("Shutting down...");
+
   const db = await Database.getDb();
   Deno.addSignalListener("SIGINT", async () => {
-    db.close();
+    db.isOpen && db.close();
     await MatrixClient.getInstance().close();
     running = false;
   });
@@ -104,11 +107,11 @@ async function main() {
   app.use(router.routes());
   app.use(router.allowedMethods());
 
+  running = true;
   startTasks(db);
 
   const PORT = Number(Deno.env.get("PORT")) || 3001;
-  console.log(`Server is running on http://localhost:${PORT}`);
-  running = true;
+  logger.info(`Server is running on http://localhost:${PORT}`);
   await app.listen({ port: PORT });
 }
 
@@ -118,14 +121,14 @@ function startTasks(db: DatabaseSync) {
     scrapeActiveFlights(db).catch(console.error);
   }, SCRAPE_INTERVAL);
 
-  const callDisplayFlights = async () => {
+  const callSendFlightsToMatrix = async () => {
     if (!running) {
       return;
     }
-    await displayFlights(db).catch(console.error);
-    setTimeout(callDisplayFlights);
+    await sendFlightsToMatrix(db).catch(console.error);
+    setTimeout(callSendFlightsToMatrix);
   };
-  callDisplayFlights();
+  callSendFlightsToMatrix();
 }
 
 if (import.meta.main) {

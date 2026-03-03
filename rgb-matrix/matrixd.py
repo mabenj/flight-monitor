@@ -7,7 +7,7 @@ COLS = 64
 CHAIN = 1
 PARALLEL = 1
 GPIO_SLOWDOWN = 1
-FONT_PATH = "./fonts/5x7.bdf"
+FONT_PATH = "./rgb-matrix/fonts/5x7.bdf"
 HARDWARE_MAPPING = "adafruit-hat"
 
 def make_matrix():

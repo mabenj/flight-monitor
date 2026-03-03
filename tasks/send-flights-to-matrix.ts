@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { formatAltitude, sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix.ts";
+import { FlightsService } from "../services/flights-service.ts";
 
 const matrix = MatrixClient.getInstance();
 
@@ -27,7 +28,10 @@ const COLORS = {
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
-export async function displayFlights(db: DatabaseSync) {
+export async function sendFlightsToMatrix(db: DatabaseSync) {
+  const flightService = new FlightsService(db);
+  const flights = flightService.getActiveFlights();
+
   await matrix.brightness(100);
   if (flights.length === 0) {
     await showMetar();
@@ -182,117 +186,6 @@ async function showMetar() {
     TIMING.metarScrollFrameMs
   );
 }
-
-const now = Math.floor(Date.now() / 1000);
-const mkTime = (deltaSeconds: number) => now + deltaSeconds;
-
-const flights: Flight[] = [
-  {
-    id: "tku-1",
-    callsign: "AY123",
-    flightNumber: "AY123",
-    aircraft: {
-      modelCode: "A320",
-      registration: "OH-LKA",
-      modelText: "Airbus A320",
-    },
-    airline: { iata: "AY", icao: "FIN", name: "Finnair" },
-    arrivalTime: {
-      scheduled: mkTime(1800),
-      estimated: mkTime(1800),
-      actual: 0,
-    },
-    departureTime: {
-      scheduled: mkTime(-1800),
-      estimated: mkTime(-1750),
-      actual: mkTime(-1700),
-    },
-    origin: {
-      iata: "HEL",
-      icao: "EFHK",
-      name: "Helsinki Airport",
-    },
-    destination: {
-      iata: "TKU",
-      icao: "EFTU",
-      name: "Turku Airport",
-    },
-    altitude: 12000,
-    groundSpeed: 300,
-    heading: 200,
-    timestamp: now,
-  },
-  {
-    id: "tku-2",
-    callsign: "OH567",
-    flightNumber: "OH567",
-    aircraft: {
-      modelCode: "AT72",
-      registration: "OH-AT7",
-      modelText: "ATR 72",
-    },
-    airline: { iata: "F2", icao: "FIN", name: "Ålandstrafik" },
-    arrivalTime: {
-      scheduled: mkTime(3600),
-      estimated: mkTime(3650),
-      actual: 0,
-    },
-    departureTime: {
-      scheduled: mkTime(-7200),
-      estimated: mkTime(-7100),
-      actual: mkTime(-7000),
-    },
-    origin: {
-      iata: "GOT",
-      icao: "ESGG",
-      name: "Gothenburg Landvetter Airport",
-    },
-    destination: {
-      iata: "TKU",
-      icao: "EFTU",
-      name: "Turku Airport",
-    },
-    altitude: 5000,
-    groundSpeed: 200,
-    heading: 180,
-    timestamp: now,
-  },
-  {
-    id: "tku-3",
-    callsign: "RYR45",
-    flightNumber: "FR45",
-    aircraft: {
-      modelCode: "B738",
-      registration: "EI-FRO",
-      modelText: "Boeing 737-800",
-    },
-    airline: { iata: "FR", icao: "RYR", name: "Ryanair" },
-    arrivalTime: {
-      scheduled: mkTime(5400),
-      estimated: mkTime(5400),
-      actual: 0,
-    },
-    departureTime: {
-      scheduled: mkTime(-3600),
-      estimated: mkTime(-3500),
-      actual: mkTime(-3400),
-    },
-    origin: {
-      iata: "VAA",
-      icao: "EFVA",
-      name: "Vaasa Airport",
-    },
-    destination: {
-      iata: "TKU",
-      icao: "EFTU",
-      name: "Turku Airport",
-    },
-    altitude: 8000,
-    groundSpeed: 250,
-    heading: 220,
-    timestamp: now,
-  },
-];
 
 function flightToTextCmds(flight: Flight, index = 1, total = 1) {
   const countText = total > 1 ? `${index}/${total}` : "";

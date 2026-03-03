@@ -27,7 +27,7 @@ export class MatrixClient {
 
   private constructor() {
     const command = new Deno.Command("sudo", {
-      args: ["-E", "python", "./matrixd.py"],
+      args: ["-E", "python", "./rgb-matrix/matrixd.py"],
       stdin: "piped",
       stdout: "piped",
       stderr: "piped",
