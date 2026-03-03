@@ -19,6 +19,7 @@ async function main() {
     running = false;
     db.isOpen && db.close();
     await MatrixClient.getInstance().close();
+    Deno.exit();
   });
 
   const app = new Application();
