@@ -6,6 +6,7 @@ import type { Bounds } from "@/types/bounds.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { SquareStackIcon, PlusIcon } from "lucide-react";
 import { useIpLocation } from "../hooks/useIpLocation.ts";
+import BrightnessControl from "./BrightnessControl.tsx";
 
 export default function BoundsPage() {
   const { bounds, createBounds, updateBounds, deleteBounds } = useBounds();
@@ -72,6 +73,9 @@ export default function BoundsPage() {
       </aside>
 
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50">
+        <div className="flex items-center justify-end border-b bg-white">
+          <BrightnessControl />
+        </div>
         {selectedId ? (
           <BoundsDetail
             bounds={selected}

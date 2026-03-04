@@ -1,5 +1,4 @@
 import "mapbox-gl/dist/mapbox-gl.css";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import mapboxgl, { GeoJSONSource, MapMouseEvent } from "mapbox-gl";
 import { useCallback, useEffect, useRef } from "react";
 import { Button } from "./ui/button.tsx";
