@@ -45,7 +45,7 @@ export class BoundsService {
       this.db.exec("BEGIN TRANSACTION;");
       const id = this.db
         .prepare(
-          "INSERT INTO bounds (longitudeMax, longitudeMin, latitudeMax, latitudeMin, label, isActive) VALUES (?, ?, ?, ?, ?, ?)"
+          "INSERT INTO bounds (longitudeMax, longitudeMin, latitudeMax, latitudeMin, label, isActive, airportCode) VALUES (?, ?, ?, ?, ?, ?, ?)"
         )
         .run(
           bounds.longitudeMax,
@@ -53,7 +53,8 @@ export class BoundsService {
           bounds.latitudeMax,
           bounds.latitudeMin,
           bounds.label,
-          bounds.isActive ? 1 : 0
+          bounds.isActive ? 1 : 0,
+          bounds.airportCode || null
         ).lastInsertRowid;
       if (bounds.isActive) {
         this.db.prepare("UPDATE bounds SET isActive = 0 WHERE id != ?").run(id);
@@ -76,7 +77,7 @@ export class BoundsService {
       this.db.exec("BEGIN TRANSACTION;");
       this.db
         .prepare(
-          "UPDATE bounds SET longitudeMax = ?, longitudeMin = ?, latitudeMax = ?, latitudeMin = ?, label = ?, isActive = ? WHERE id = ?"
+          "UPDATE bounds SET longitudeMax = ?, longitudeMin = ?, latitudeMax = ?, latitudeMin = ?, label = ?, isActive = ?, airportCode = ? WHERE id = ?"
         )
         .run(
           bounds.longitudeMax,
@@ -85,6 +86,7 @@ export class BoundsService {
           bounds.latitudeMin,
           bounds.label,
           bounds.isActive ? 1 : 0,
+          bounds.airportCode || null,
           id
         );
       if (bounds.isActive) {
@@ -135,6 +137,7 @@ export class BoundsService {
       latitudeMin: row.latitudeMin as number,
       label: row.label as string,
       isActive: row.isActive === 1,
+      airportCode: row.airportCode ? (row.airportCode as string) : undefined,
     };
   }
 }

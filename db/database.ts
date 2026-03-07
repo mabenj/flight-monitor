@@ -29,7 +29,7 @@ export class Database {
     const currentVersion =
       this.db.prepare("SELECT version FROM dbVersion WHERE id = 1").get()
         ?.version || 0;
-    const targetVersion = 2; // Bump when adding migrations
+    const targetVersion = 3; // Bump when adding migrations
 
     if (currentVersion === targetVersion) {
       return;
