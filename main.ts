@@ -2,11 +2,12 @@ import { Application, Router } from "@oak/oak";
 import { Database } from "./db/database.ts";
 import { BoundsService } from "./services/bounds-service.ts";
 import { FlightsService } from "./services/flights-service.ts";
+import { SettingsService } from "./services/settings-service.ts";
 import { DatabaseSync } from "node:sqlite";
 import { scrapeActiveFlights } from "./tasks/scrape-active-flights.ts";
 import Log from "./lib/log.ts";
 import { MatrixClient } from "./rgb-matrix/matrix.ts";
-import { sendFlightsToMatrix } from "./tasks/send-flights-to-matrix.ts";
+// import { sendFlightsToMatrix } from "./tasks/send-flights-to-matrix.ts";
 
 let running = false;
 
@@ -77,6 +78,27 @@ async function main() {
     ctx.response.body = service.getActiveFlights();
   });
 
+  router.get("/api/matrix/brightness", (ctx) => {
+    const service = new SettingsService(db);
+    ctx.response.body = { brightness: service.getBrightness() };
+  });
+
+  router.put("/api/matrix/brightness", async (ctx) => {
+    const body = await ctx.request.body.json();
+    const brightness = body.brightness;
+    if (typeof brightness !== "number" || brightness < 0 || brightness > 100) {
+      ctx.response.status = 400;
+      ctx.response.body = {
+        reason: "Brightness must be a number between 0 and 100",
+      };
+      return;
+    }
+    const service = new SettingsService(db);
+    service.setBrightness(brightness);
+    ctx.response.status = 200;
+    ctx.response.body = { brightness };
+  });
+
   // Log
   app.use((ctx, next) => {
     const logger = new Log("api");
@@ -125,14 +147,14 @@ function startTasks(db: DatabaseSync) {
     }
   }, SCRAPE_INTERVAL);
 
-  const callSendFlightsToMatrix = async () => {
-    if (!running) {
-      return;
-    }
-    await sendFlightsToMatrix(db).catch(console.error);
-    setTimeout(callSendFlightsToMatrix);
-  };
-  callSendFlightsToMatrix();
+  //   const callSendFlightsToMatrix = async () => {
+  //     if (!running) {
+  //       return;
+  //     }
+  //     await sendFlightsToMatrix(db).catch(console.error);
+  //     setTimeout(callSendFlightsToMatrix);
+  //   };
+  //   callSendFlightsToMatrix();
 }
 
 if (import.meta.main) {

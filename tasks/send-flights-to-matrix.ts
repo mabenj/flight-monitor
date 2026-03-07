@@ -3,6 +3,7 @@ import { formatAltitude, sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix.ts";
 import { FlightsService } from "../services/flights-service.ts";
+import { SettingsService } from "../services/settings-service.ts";
 
 const matrix = MatrixClient.getInstance();
 
@@ -30,9 +31,11 @@ type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
 export async function sendFlightsToMatrix(db: DatabaseSync) {
   const flightService = new FlightsService(db);
+  const settingsService = new SettingsService(db);
   const flights = flightService.getActiveFlights();
 
-  await matrix.brightness(100);
+  const brightness = settingsService.getBrightness();
+  await matrix.brightness(brightness);
   if (flights.length === 0) {
     await showMetar();
   }
