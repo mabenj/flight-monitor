@@ -56,6 +56,7 @@ export default function BoundsDetail({
     south: bounds?.latitudeMin,
     east: bounds?.longitudeMax,
     west: bounds?.longitudeMin,
+    airportCode: bounds?.airportCode ?? "",
     dirty: false,
   });
   const [mapDiagonal, setMapDiagonal] = useState<[Point, Point] | null>(
@@ -76,6 +77,7 @@ export default function BoundsDetail({
         south: undefined,
         east: undefined,
         west: undefined,
+        airportCode: "",
         dirty: false,
       });
       setMapDiagonal(null);
@@ -87,6 +89,7 @@ export default function BoundsDetail({
         south: bounds?.latitudeMin,
         east: bounds?.longitudeMax,
         west: bounds?.longitudeMin,
+        airportCode: bounds?.airportCode ?? "",
         dirty: false,
       });
       if (bounds) {
@@ -214,6 +217,7 @@ export default function BoundsDetail({
       latitudeMin: formValues.south,
       longitudeMax: formValues.east,
       longitudeMin: formValues.west,
+      airportCode: formValues.airportCode.trim() || undefined,
     };
     onSave(updated);
     setFormValues((prev) => ({ ...prev, dirty: false }));
@@ -388,6 +392,29 @@ export default function BoundsDetail({
                   />
                 </div>
               </div>
+
+              <Field>
+                <FieldLabel htmlFor="airport-code">
+                  Reference airport (ICAO)
+                </FieldLabel>
+                <Input
+                  id="airport-code"
+                  type="text"
+                  placeholder="e.g. EFHK"
+                  value={formValues.airportCode}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      "airportCode",
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  maxLength={4}
+                />
+                <FieldDescription className="text-sm">
+                  4-letter ICAO code of a reference airport. This is used for
+                  displaying the temperature and METAR (optional)
+                </FieldDescription>
+              </Field>
             </div>
           </div>
 

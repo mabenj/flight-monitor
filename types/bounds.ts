@@ -6,4 +6,5 @@ export type Bounds = {
   latitudeMin: number;
   label: string;
   isActive: boolean;
+  airportCode?: string;
 };
