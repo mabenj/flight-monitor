@@ -19,29 +19,41 @@ export type ReadyMsg = { ready: true; font?: boolean };
 
 export class MatrixClient {
   private static instance: MatrixClient | null = null;
-  private readonly process: Deno.ChildProcess;
+  private readonly process: Deno.ChildProcess | null = null;
   private readonly encoder = new TextEncoder();
-  private readonly writer: WritableStreamDefaultWriter<Uint8Array>;
-  private readonly ready: Promise<ReadyMsg>;
+  private readonly writer: WritableStreamDefaultWriter<Uint8Array> | null =
+    null;
+  private readonly ready: Promise<ReadyMsg> | null = null;
   private readonly log = new Log("MatrixClient");
+  private readonly available: boolean = false;
 
   private constructor() {
-    const command = new Deno.Command("sudo", {
-      args: ["-E", "python", "./rgb-matrix/matrixd.py"],
-      stdin: "piped",
-      stdout: "piped",
-      stderr: "piped",
-    });
-    this.process = command.spawn();
-    this.writer = this.process.stdin.getWriter();
-    const [stdoutForReady, stdoutForLog] = this.process.stdout.tee();
-    this.ready = readReadyLine(stdoutForReady);
-    logStreamLines(
-      this.process.stderr,
-      this.log.error.bind(this.log),
-      "[matrixd] "
-    );
-    logStreamLines(stdoutForLog, this.log.info.bind(this.log), "[matrixd] ");
+    try {
+      const command = new Deno.Command("sudo", {
+        args: ["-E", "python", "./rgb-matrix/matrixd.py"],
+        stdin: "piped",
+        stdout: "piped",
+        stderr: "piped",
+      });
+      this.process = command.spawn();
+      this.writer = this.process.stdin.getWriter();
+      const [stdoutForReady, stdoutForLog] = this.process.stdout.tee();
+      this.ready = readReadyLine(stdoutForReady);
+      logStreamLines(
+        this.process.stderr,
+        this.log.error.bind(this.log),
+        "[matrixd] "
+      );
+      logStreamLines(stdoutForLog, this.log.info.bind(this.log), "[matrixd] ");
+      this.available = true;
+      this.log.info("Matrix display initialized successfully");
+    } catch (error) {
+      this.log.error(
+        "Failed to initialize matrix display, operations will be no-ops",
+        error
+      );
+      this.available = false;
+    }
   }
 
   static getInstance() {
@@ -51,7 +63,14 @@ export class MatrixClient {
     return MatrixClient.instance;
   }
 
+  isAvailable(): boolean {
+    return this.available;
+  }
+
   async send(cmd: MatrixCmd) {
+    if (!this.available || !this.ready || !this.writer) {
+      return MatrixClient.instance!;
+    }
     await this.ready;
     await this.writer.write(this.encoder.encode(JSON.stringify(cmd) + "\n"));
     return MatrixClient.instance!;
@@ -74,18 +93,26 @@ export class MatrixClient {
   }
 
   async close() {
+    if (!this.available || !this.process) {
+      this.log.debug("Matrix not available, nothing to close");
+      return;
+    }
     try {
       await this.send({ cmd: "exit" });
     } catch {
       // ignore (daemon may already be dead)
     }
     try {
-      await this.writer.close();
+      if (this.writer) {
+        await this.writer.close();
+      }
     } catch {
       // ignore
     }
     try {
-      this.writer.releaseLock();
+      if (this.writer) {
+        this.writer.releaseLock();
+      }
     } catch {
       // ignore
     }
