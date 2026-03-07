@@ -5,39 +5,7 @@ import { Flight } from "../types/flight.ts";
 import { BoundsService } from "../services/bounds-service.ts";
 import { FlightsService } from "../services/flights-service.ts";
 import Log from "../lib/log.ts";
-
-const FLIGHT_DETAILS_URL =
-  "https://data-live.flightradar24.com/clickhandler/?flight=";
-const REALTIME_FLIGHTS_URL =
-  "https://data-cloud.flightradar24.com/zones/fcgi/feed.js";
-const HEADERS = {
-  "accept-encoding": "gzip, br",
-  "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-  accept: "application/json",
-  "cache-control": "max-age=0",
-  origin: "https://www.flightradar24.com",
-  referer: "https://www.flightradar24.com/",
-  "sec-fetch-dest": "empty",
-  "sec-fetch-mode": "cors",
-  "sec-fetch-site": "same-site",
-  "user-agent":
-    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
-};
-const REALTIME_FLIGHTS_PARAMS = {
-  faa: 1,
-  satellite: 1,
-  mlat: 1,
-  flarm: 1,
-  adsb: 1,
-  gnd: 1,
-  air: 1,
-  vehicles: 0,
-  estimated: 1,
-  maxage: 14400,
-  gliders: 1,
-  stats: 1,
-  limit: 1500,
-};
+import { config } from "../config.ts";
 
 export async function scrapeActiveFlights(db: DatabaseSync) {
   const logger = new Log("scrape-active-flights");
@@ -60,13 +28,15 @@ export async function scrapeActiveFlights(db: DatabaseSync) {
 }
 
 async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
-  const url = new URL(REALTIME_FLIGHTS_URL);
+  const url = new URL(config.flightradar24.realtimeUrl);
   url.searchParams.append("bounds", boundsToString(bounds));
-  Object.entries(REALTIME_FLIGHTS_PARAMS).forEach(([key, value]) => {
+  Object.entries(config.flightradar24.queryParams).forEach(([key, value]) => {
     url.searchParams.append(key, value.toString());
   });
   logger.debug(`Fetching flights from bounds '${bounds.label}'`);
-  const response = await fetch(url.toString(), { headers: HEADERS });
+  const response = await fetch(url.toString(), {
+    headers: config.flightradar24.headers,
+  });
   if (!response.headers.get("content-type")?.includes("application/json")) {
     logger.error(
       `Unexpected content type: ${response.headers.get(
@@ -84,11 +54,12 @@ async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
   logger.debug(`Found ${keys.length} flights in the response`);
   const flights: Flight[] = [];
   for (const key of keys) {
-    const detailsResponse = await fetch(`${FLIGHT_DETAILS_URL}${key}`, {
-      headers: {
-        ...HEADERS,
-      },
-    });
+    const detailsResponse = await fetch(
+      `${config.flightradar24.detailsUrl}${key}`,
+      {
+        headers: config.flightradar24.headers,
+      }
+    );
     if (
       !detailsResponse.headers.get("content-type")?.includes("application/json")
     ) {
@@ -97,7 +68,7 @@ async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
           "content-type"
         )} with status ${detailsResponse.status} (${
           detailsResponse.statusText
-        }) from ${FLIGHT_DETAILS_URL}${key}`
+        }) from ${config.flightradar24.detailsUrl}${key}`
       );
       continue;
     }
@@ -107,7 +78,7 @@ async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
       continue;
     }
     flights.push(parseFlight(key, flight));
-    await sleep(200);
+    await sleep(config.flightradar24.delayBetweenRequestsMs);
   }
 
   return flights;

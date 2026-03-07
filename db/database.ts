@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import * as path from "@std/path";
+import { config } from "../config.ts";
 
 const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "./migrations");
@@ -8,7 +9,7 @@ export class Database {
   public db: DatabaseSync;
 
   private constructor() {
-    this.db = new DatabaseSync("db.sqlite");
+    this.db = new DatabaseSync(config.database.filename);
   }
 
   public static async getDb() {

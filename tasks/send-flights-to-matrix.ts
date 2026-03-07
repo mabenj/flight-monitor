@@ -4,28 +4,9 @@ import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix.ts";
 import { FlightsService } from "../services/flights-service.ts";
 import { SettingsService } from "../services/settings-service.ts";
+import { config } from "../config.ts";
 
 const matrix = MatrixClient.getInstance();
-
-const DISPLAY = { widthPx: 64, fontWidthPx: 5 };
-
-const TIMING = {
-  holdMs: 2000,
-  betweenScrollsMs: 1000,
-  routeScrollFrameMs: 20,
-  airlineScrollFrameMs: 20,
-  aircraftScrollFrameMs: 20,
-  metarScrollFrameMs: 40,
-};
-
-const COLORS = {
-  white: { r: 255, g: 255, b: 255 },
-  magenta: { r: 210, g: 50, b: 235 },
-  cyan: { r: 50, g: 210, b: 235 },
-  green: { r: 37, g: 242, b: 10 },
-  orange: { r: 255, g: 165, b: 0 },
-  grey: { r: 128, g: 128, b: 128 },
-};
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
@@ -45,16 +26,16 @@ export async function sendFlightsToMatrix(db: DatabaseSync) {
 }
 
 function textWidthPx(text: string): number {
-  return text.length * DISPLAY.fontWidthPx;
+  return text.length * config.matrix.displayFontWidthPx;
 }
 
 function needsScroll(cmd: TextCmd): boolean {
-  return textWidthPx(cmd.text) > DISPLAY.widthPx - 4;
+  return textWidthPx(cmd.text) > config.matrix.displayWidthPx - 4;
 }
 
 function startOffscreenRight(cmd: TextCmd): number {
   const baseX = cmd.x ?? 2;
-  return baseX + (DISPLAY.widthPx - 2);
+  return baseX + (config.matrix.displayWidthPx - 2);
 }
 
 async function renderFrame(cmds: TextCmd[]): Promise<void> {
@@ -101,26 +82,26 @@ async function showFlight(flight: Flight, index: number, total: number) {
       aircraftForStatic,
       cmds.altitude,
     ],
-    TIMING.holdMs
+    config.matrix.timing.holdMs
   );
 
-  await sleep(TIMING.betweenScrollsMs);
+  await sleep(config.matrix.timing.betweenScrollsMs);
 
   await scrollLeft(
     cmds.routeLong,
     [cmds.flightNumber, aircraftForStatic, cmds.altitude],
-    TIMING.routeScrollFrameMs
+    config.matrix.timing.routeScrollFrameMs
   );
   await scrollLeft(
     cmds.airlineAndCallsign,
     [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
-    TIMING.airlineScrollFrameMs
+    config.matrix.timing.airlineScrollFrameMs
   );
   if (needsScroll(cmds.aircraftLong)) {
     await scrollLeft(
       cmds.aircraftLong,
       [cmds.flightCount, cmds.routeShort, cmds.flightNumber, cmds.altitude],
-      TIMING.aircraftScrollFrameMs
+      config.matrix.timing.aircraftScrollFrameMs
     );
   }
 
@@ -132,10 +113,10 @@ async function showFlight(flight: Flight, index: number, total: number) {
       aircraftForStatic,
       cmds.altitude,
     ],
-    TIMING.holdMs
+    config.matrix.timing.holdMs
   );
 
-  await sleep(TIMING.betweenScrollsMs);
+  await sleep(config.matrix.timing.betweenScrollsMs);
 }
 
 async function showMetar() {
@@ -160,33 +141,33 @@ async function showMetar() {
     text: timeString,
     y: 8,
     x: 2,
-    ...COLORS.cyan,
+    ...config.matrix.colors.cyan,
   };
   const tempCmd: TextCmd = {
     cmd: "text",
     text: tempC,
     y: 8,
-    x: 62 - tempC.length * DISPLAY.fontWidthPx,
-    ...COLORS.white,
+    x: 62 - tempC.length * config.matrix.displayFontWidthPx,
+    ...config.matrix.colors.white,
   };
   const dateCmd: TextCmd = {
     cmd: "text",
     text: dateString,
     y: 15,
     x: 2,
-    ...COLORS.magenta,
+    ...config.matrix.colors.magenta,
   };
   const metarCmd: TextCmd = {
     cmd: "text",
     text: metarString,
     y: 29,
     x: 2,
-    ...COLORS.grey,
+    ...config.matrix.colors.grey,
   };
   await scrollLeft(
     metarCmd,
     [timeCmd, tempCmd, dateCmd],
-    TIMING.metarScrollFrameMs
+    config.matrix.timing.metarScrollFrameMs
   );
 }
 
@@ -197,8 +178,9 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     cmd: "text",
     text: countText,
     y: 8,
-    x: total > 1 ? 62 - countText.length * DISPLAY.fontWidthPx : 64,
-    ...COLORS.white,
+    x:
+      total > 1 ? 62 - countText.length * config.matrix.displayFontWidthPx : 64,
+    ...config.matrix.colors.white,
   };
 
   const routeShort: TextCmd = {
@@ -208,7 +190,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     }`,
     y: 8,
     x: 2,
-    ...COLORS.magenta,
+    ...config.matrix.colors.magenta,
   };
 
   const routeLong: TextCmd = {
@@ -221,7 +203,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     }`,
     y: 8,
     x: 2,
-    ...COLORS.magenta,
+    ...config.matrix.colors.magenta,
   };
 
   const flightNumber: TextCmd = {
@@ -229,7 +211,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     text: flight.flightNumber ?? flight.callsign ?? "N/A",
     y: 15,
     x: 2,
-    ...COLORS.white,
+    ...config.matrix.colors.white,
   };
 
   const airlineAndCallsign: TextCmd = {
@@ -237,7 +219,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     text: `${flight.airline?.name ?? "N/A"} ${flight.callsign ?? "N/A"}`,
     y: 15,
     x: 2,
-    ...COLORS.white,
+    ...config.matrix.colors.white,
   };
 
   const aircraftShort: TextCmd = {
@@ -245,7 +227,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     text: flight.aircraft?.modelCode ?? flight.aircraft?.registration ?? "N/A",
     y: 22,
     x: 2,
-    ...COLORS.cyan,
+    ...config.matrix.colors.cyan,
   };
 
   const aircraftLong: TextCmd = {
@@ -257,7 +239,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
       "N/A",
     y: 22,
     x: 2,
-    ...COLORS.cyan,
+    ...config.matrix.colors.cyan,
   };
 
   const altitude: TextCmd = {
@@ -265,7 +247,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     text: flight.altitude > 0 ? formatAltitude(flight.altitude) : "ON GROUND",
     y: 29,
     x: 2,
-    ...COLORS.green,
+    ...config.matrix.colors.green,
   };
 
   return {
