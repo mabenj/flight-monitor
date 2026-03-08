@@ -50,7 +50,7 @@ export class TaskScheduler {
   }
 
   private startScrapeTask(): void {
-    this.scrapeIntervalId = setInterval(async () => {
+    const runScrapeTask = async () => {
       try {
         await scrapeActiveFlights(this.ctx.db);
         await scrapeWeather(this.ctx.db);
@@ -62,23 +62,29 @@ export class TaskScheduler {
         clearInterval(this.scrapeIntervalId);
         this.scrapeIntervalId = null;
       }
-    }, config.tasks.scrapeInterval);
+    };
+    runScrapeTask().then(() => {
+      this.scrapeIntervalId = setInterval(
+        runScrapeTask,
+        config.tasks.scrapeInterval
+      );
+    });
   }
 
   private startMatrixTask(): void {
     const runMatrixTask = async () => {
-      if (!this.running) {
-        return;
-      }
-
       try {
         await sendFlightsToMatrix(this.ctx.db);
       } catch (error) {
         this.logger.error("Matrix task failed", error);
       }
 
-      // Reschedule for next iteration
-      this.matrixTimeoutId = setTimeout(runMatrixTask, 0);
+      if (!this.running && this.matrixTimeoutId !== null) {
+        clearTimeout(this.matrixTimeoutId);
+        this.matrixTimeoutId = null;
+      } else if (this.running) {
+        this.matrixTimeoutId = setTimeout(runMatrixTask, 0);
+      }
     };
 
     runMatrixTask();
