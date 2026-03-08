@@ -11,7 +11,6 @@ export async function scrapeActiveFlights(db: DatabaseSync) {
   const logger = new Log("scrape-flights");
   const boundsService = new BoundsService(db);
   const flightsService = new FlightsService(db);
-  flightsService.setActiveFlights([]);
   const bounds = boundsService.getActive();
   if (!bounds) {
     logger.info("No active bounds found");

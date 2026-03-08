@@ -50,6 +50,9 @@ export class TaskScheduler {
   }
 
   private startScrapeTask(): void {
+    const emptyActiveFlights = () => {
+      this.ctx.flightsService.setActiveFlights([]);
+    };
     const runScrapeTask = async () => {
       try {
         await scrapeActiveFlights(this.ctx.db);
@@ -63,6 +66,7 @@ export class TaskScheduler {
         this.scrapeIntervalId = null;
       }
     };
+    emptyActiveFlights();
     runScrapeTask().then(() => {
       this.scrapeIntervalId = setInterval(
         runScrapeTask,
