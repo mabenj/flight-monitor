@@ -176,21 +176,45 @@ export default function ActiveFlightsPage() {
   return (
     <div className="flex flex-col p-4 h-full overflow-auto">
       {/* Page header */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <div className="text-lg font-semibold text-slate-900">
-            Active flights
-          </div>
-          {activeBounds && (
-            <>
-              <span className="text-slate-400">|</span>
-              <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        {/* Left: title + meta */}
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+              Active Flights
+            </h1>
+            {activeBounds && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                 {activeBounds.label}
               </span>
-            </>
-          )}
+            )}
+          </div>
+          <p className="mt-0.5 text-sm text-slate-400">
+            {flights.length === 0
+              ? "No flights currently tracked"
+              : `${flights.length} flight${
+                  flights.length === 1 ? "" : "s"
+                } tracked`}
+          </p>
         </div>
-        <p className="text-sm text-slate-500">{flights.length} flights</p>
+
+        {/* Right: live indicator */}
+        {!loading && (
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            Live
+          </div>
+        )}
+        {loading && (
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
+            <Spinner className="w-3 h-3" />
+            Updating…
+          </div>
+        )}
       </div>
 
       {/* Weather card */}
@@ -202,109 +226,177 @@ export default function ActiveFlightsPage() {
           No active flights
         </div>
       ) : (
-        <div className="overflow-x-auto border rounded-md bg-white">
+        <div className="overflow-x-auto border rounded-lg bg-white shadow-sm">
           <table className="w-full text-xs">
-            <thead className="border-b bg-slate-50">
-              <tr>
-                <Th>Flight #</Th>
+            <thead>
+              <tr className="border-b bg-slate-50">
+                <Th>Flight</Th>
                 <Th>Callsign</Th>
                 <Th>Airline</Th>
                 <Th>From</Th>
                 <Th>To</Th>
                 <Th>Aircraft</Th>
-                <Th>Registration</Th>
+                <Th>Reg.</Th>
                 <Th center>Alt.</Th>
-                <Th center>Speed</Th>
+                <Th center>Spd.</Th>
                 <Th center>Hdg.</Th>
-                <Th>Departure</Th>
-                <Th>Arrival</Th>
+                <Th center>Departed</Th>
+                <Th center>Arrives</Th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {flights.map((flight) => (
                 <tr
                   key={flight.id}
-                  className="border-b hover:bg-slate-50 transition-colors"
+                  className="hover:bg-blue-50/40 transition-colors group"
                 >
-                  <Td bold>{flight.flightNumber}</Td>
-                  <Td>{flight.callsign}</Td>
-                  <Td title={flight.airline?.icao}>{flight.airline?.name}</Td>
-                  <Td>
+                  {/* Flight number */}
+                  <td className="px-3 py-2.5 font-semibold text-blue-700 whitespace-nowrap">
+                    {flight.flightNumber ?? <NA />}
+                  </td>
+
+                  {/* Callsign */}
+                  <td className="px-3 py-2.5 font-mono text-slate-600 whitespace-nowrap">
+                    {flight.callsign ?? <NA />}
+                  </td>
+
+                  {/* Airline */}
+                  <td
+                    className="px-3 py-2.5 text-slate-700 whitespace-nowrap"
+                    title={flight.airline?.icao}
+                  >
+                    {flight.airline?.name ?? <NA />}
+                  </td>
+
+                  {/* Origin */}
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     {flight.origin?.name ? (
-                      <div title={flight.origin.icao}>
-                        <span>{flight.origin.name}</span>
-                        <span className="font-medium ml-1 text-slate-400">
+                      <span title={flight.origin.icao}>
+                        <span className="text-slate-700">
+                          {flight.origin.name}
+                        </span>
+                        <span className="ml-1 font-semibold text-slate-400">
                           ({flight.origin.iata})
                         </span>
-                      </div>
+                      </span>
                     ) : (
                       <NA />
                     )}
-                  </Td>
-                  <Td>
+                  </td>
+
+                  {/* Destination */}
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     {flight.destination?.name ? (
-                      <div title={flight.destination.icao}>
-                        <span>{flight.destination.name}</span>
-                        <span className="font-medium ml-1 text-slate-400">
+                      <span title={flight.destination.icao}>
+                        <span className="text-slate-700">
+                          {flight.destination.name}
+                        </span>
+                        <span className="ml-1 font-semibold text-slate-400">
                           ({flight.destination.iata})
                         </span>
-                      </div>
+                      </span>
                     ) : (
                       <NA />
                     )}
-                  </Td>
-                  <Td title={flight.aircraft.modelCode}>
-                    {flight.aircraft?.modelText}
-                  </Td>
-                  <Td>{flight.aircraft?.registration}</Td>
-                  <Td center>{formatAltitude(flight.altitude)}</Td>
-                  <Td center>{Math.round(flight.groundSpeed)} kts</Td>
-                  <Td center>{flight.heading}°</Td>
-                  <Td>
+                  </td>
+
+                  {/* Aircraft */}
+                  <td
+                    className="px-3 py-2.5 text-slate-700 whitespace-nowrap"
+                    title={flight.aircraft?.modelCode}
+                  >
+                    {flight.aircraft?.modelText ?? <NA />}
+                  </td>
+
+                  {/* Registration */}
+                  <td className="px-3 py-2.5 font-mono text-slate-600 whitespace-nowrap">
+                    {flight.aircraft?.registration ?? <NA />}
+                  </td>
+
+                  {/* Altitude */}
+                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-slate-700 tabular-nums">
+                        {formatAltitude(flight.altitude)}
+                      </span>
+                    </span>
+                  </td>
+
+                  {/* Speed */}
+                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                    <span className="tabular-nums text-slate-700">
+                      {Math.round(flight.groundSpeed)}
+                    </span>
+                    <span className="text-slate-400 ml-0.5">kts</span>
+                  </td>
+
+                  {/* Heading */}
+                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center justify-center gap-0.5">
+                      <span
+                        className="inline-block text-slate-400"
+                        style={{ transform: `rotate(${flight.heading}deg)` }}
+                      >
+                        ↑
+                      </span>
+                      <span className="tabular-nums text-slate-700">
+                        {flight.heading}°
+                      </span>
+                    </span>
+                  </td>
+
+                  {/* Departure */}
+                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
                     {flight.departureTime?.scheduled > 0 ? (
-                      <>
-                        <span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="tabular-nums font-medium text-slate-700">
                           {formatTime(flight.departureTime.scheduled)}
                         </span>
                         {flight.departureTime?.actual > 0 &&
                           !flight.departureTime?.estimated && (
-                            <span className="ml-1 text-slate-400">
-                              (Act. {formatTime(flight.departureTime.actual)})
+                            <span className="tabular-nums text-slate-400">
+                              Act.&nbsp;
+                              {formatTime(flight.departureTime.actual)}
                             </span>
                           )}
                         {flight.departureTime?.estimated > 0 &&
                           !flight.departureTime?.actual && (
-                            <span className="ml-1 text-slate-400">
-                              (Est. {formatTime(flight.departureTime.estimated)}
-                              )
+                            <span className="tabular-nums text-amber-500">
+                              Est.&nbsp;
+                              {formatTime(flight.departureTime.estimated)}
                             </span>
                           )}
-                      </>
+                      </div>
                     ) : (
                       <NA />
                     )}
-                  </Td>
-                  <Td>
+                  </td>
+
+                  {/* Arrival */}
+                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
                     {flight.arrivalTime?.scheduled > 0 ? (
-                      <>
-                        <span>{formatTime(flight.arrivalTime.scheduled)}</span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="tabular-nums font-medium text-slate-700">
+                          {formatTime(flight.arrivalTime.scheduled)}
+                        </span>
                         {flight.arrivalTime?.actual > 0 &&
                           !flight.arrivalTime?.estimated && (
-                            <span className="ml-1 text-slate-400">
-                              (Act. {formatTime(flight.arrivalTime.actual)})
+                            <span className="tabular-nums text-slate-400">
+                              Act.&nbsp;{formatTime(flight.arrivalTime.actual)}
                             </span>
                           )}
                         {flight.arrivalTime?.estimated > 0 &&
                           !flight.arrivalTime?.actual && (
-                            <span className="ml-1 text-slate-400">
-                              (Est. {formatTime(flight.arrivalTime.estimated)})
+                            <span className="tabular-nums text-amber-500">
+                              Est.&nbsp;
+                              {formatTime(flight.arrivalTime.estimated)}
                             </span>
                           )}
-                      </>
+                      </div>
                     ) : (
                       <NA />
                     )}
-                  </Td>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -314,7 +406,6 @@ export default function ActiveFlightsPage() {
     </div>
   );
 }
-
 const Th = ({
   children,
   center,
@@ -324,7 +415,7 @@ const Th = ({
 }) => (
   <th
     className={
-      "px-3 py-2 font-medium text-slate-700" +
+      "px-3 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[11px]" +
       (center ? " text-center" : " text-left")
     }
   >
@@ -332,27 +423,4 @@ const Th = ({
   </th>
 );
 
-const Td = ({
-  children,
-  center,
-  bold,
-  title,
-}: {
-  children: React.ReactNode;
-  center?: boolean;
-  bold?: boolean;
-  title?: string;
-}) => (
-  <td
-    className={
-      "px-3 py-2 text-slate-700" +
-      (center ? " text-center" : " text-left") +
-      (bold ? " font-semibold " : "")
-    }
-    title={title}
-  >
-    {children || <NA />}
-  </td>
-);
-
-const NA = () => <span className="text-slate-400 italic font-normal">N/A</span>;
+const NA = () => <span className="text-slate-300 italic font-normal">—</span>;
