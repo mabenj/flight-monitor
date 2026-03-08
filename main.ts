@@ -16,6 +16,7 @@ import { MatrixClient } from "./rgb-matrix/matrix.ts";
 import { config } from "./config.ts";
 
 async function main() {
+  await Log.setupLogging();
   const logger = new Log("main");
 
   const db = await Database.getDb();
