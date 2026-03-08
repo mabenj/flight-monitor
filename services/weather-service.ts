@@ -13,40 +13,52 @@ export class WeatherService {
     if (!row) {
       throw new NotFoundError(`Airport ${airportIcao} not found`);
     }
-    return this.mapToWeather(row);
+    const weather = this.mapToWeather(row);
+    if (!weather.timestamp) {
+      throw new NotFoundError(`Weather for airport ${airportIcao} not found`);
+    }
+    return weather;
   }
 
   setWeather(weather: Weather): CreateResult<Weather> {
     if (weather.airportIcao.length !== 4) {
       return [{ reason: "Airport ICAO must be 4 characters long" }, null];
     }
-    let existingAirportId = this.db
-      .prepare("SELECT id FROM airport WHERE icao = ?")
-      .get(weather.airportIcao.toUpperCase())?.id;
-    if (!existingAirportId) {
-      this.db
-        .prepare("INSERT INTO airport (icao, iata) VALUES (?, ?)")
-        .run(
-          weather.airportIcao.toUpperCase(),
-          weather.airportIata?.toUpperCase()
-        );
-      existingAirportId = this.db
+    try {
+      this.db.exec("BEGIN TRANSACTION;");
+      let airportId = this.db
         .prepare("SELECT id FROM airport WHERE icao = ?")
         .get(weather.airportIcao.toUpperCase())?.id;
+      if (!airportId) {
+        this.db
+          .prepare("INSERT INTO airport (icao, iata) VALUES (?, ?)")
+          .run(
+            weather.airportIcao.toUpperCase(),
+            weather.airportIata?.toUpperCase()
+          );
+        airportId = this.db
+          .prepare("SELECT id FROM airport WHERE icao = ?")
+          .get(weather.airportIcao.toUpperCase())?.id;
+      }
+
+      this.db
+        .prepare(
+          "UPDATE airport SET metar = ?, skyCondition = ?, tempCelsius = ?, timestamp = ? WHERE id = ?"
+        )
+        .run(
+          weather.metar,
+          weather.skyCondition,
+          weather.tempCelsius,
+          weather.timestamp,
+          airportId!
+        );
+
+      this.db.exec("COMMIT;");
+      return [null, this.getWeather(weather.airportIcao)!];
+    } catch (error) {
+      this.db.exec("ROLLBACK;");
+      throw error;
     }
-
-    this.db
-      .prepare(
-        "INSERT INTO airport (metar, skyCondition, tempCelsius, timestamp) VALUES (?, ?, ?, ?)"
-      )
-      .run(
-        weather.metar,
-        weather.skyCondition,
-        weather.tempCelsius,
-        weather.timestamp
-      );
-
-    return [null, this.getWeather(weather.airportIcao)!];
   }
 
   private mapToWeather(row: Record<string, SQLOutputValue>): Weather {

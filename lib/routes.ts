@@ -24,10 +24,8 @@ export function setupRoutes(router: Router, ctx: AppContext): void {
   router.put("/api/matrix/brightness", handleSetBrightness);
 
   // Weather API
-  router.get("/api/weather:icao", handleGetWeather);
+  router.get("/api/weather/:icao", handleGetWeather);
 }
-
-// ============ Bounds Handlers ============
 
 async function handleGetBounds(routerCtx: RouterContext<"/api/bounds">) {
   const ctx = routerCtx.state.context as AppContext;
@@ -86,8 +84,6 @@ async function handleDeleteBound(routerCtx: RouterContext<"/api/bounds/:id">) {
   routerCtx.response.status = 204;
 }
 
-// ============ Flights Handlers ============
-
 async function handleGetActiveFlights(
   routerCtx: RouterContext<"/api/flights/active">
 ) {
@@ -95,8 +91,6 @@ async function handleGetActiveFlights(
   const flights = ctx.flightsService.getActiveFlights();
   routerCtx.response.body = flights;
 }
-
-// ============ Matrix Handlers ============
 
 async function handleGetBrightness(
   routerCtx: RouterContext<"/api/matrix/brightness">
@@ -131,7 +125,9 @@ async function handleSetBrightness(
   routerCtx.response.body = { brightness };
 }
 
-async function handleGetWeather(routerCtx: RouterContext<"/api/weather:icao">) {
+async function handleGetWeather(
+  routerCtx: RouterContext<"/api/weather/:icao">
+) {
   const ctx = routerCtx.state.context as AppContext;
   const icao = routerCtx.params.icao;
   const weather = ctx.weatherService.getWeather(icao);
