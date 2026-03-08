@@ -7,6 +7,7 @@ import { sendFlightsToMatrix } from "../tasks/send-flights-to-matrix.ts";
 import { AppContext } from "./context.ts";
 import Log from "./log.ts";
 import { config } from "../config.ts";
+import { scrapeWeather } from "../tasks/scrape-weather.ts";
 
 export class TaskScheduler {
   private scrapeIntervalId: number | null = null;
@@ -52,6 +53,7 @@ export class TaskScheduler {
     this.scrapeIntervalId = setInterval(async () => {
       try {
         await scrapeActiveFlights(this.ctx.db);
+        await scrapeWeather(this.ctx.db);
       } catch (error) {
         this.logger.error("Scrape task failed", error);
       }

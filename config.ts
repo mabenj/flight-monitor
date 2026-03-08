@@ -22,6 +22,7 @@ export const config = {
   flightradar24: {
     detailsUrl: "https://data-live.flightradar24.com/clickhandler/?flight=",
     realtimeUrl: "https://data-cloud.flightradar24.com/zones/fcgi/feed.js",
+    airportUrl: "https://api.flightradar24.com/common/v1/airport.json",
     headers: {
       "accept-encoding": "gzip, br",
       "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",

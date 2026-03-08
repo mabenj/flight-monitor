@@ -22,6 +22,9 @@ export function setupRoutes(router: Router, ctx: AppContext): void {
   // Matrix API
   router.get("/api/matrix/brightness", handleGetBrightness);
   router.put("/api/matrix/brightness", handleSetBrightness);
+
+  // Weather API
+  router.get("/api/weather:icao", handleGetWeather);
 }
 
 // ============ Bounds Handlers ============
@@ -126,4 +129,11 @@ async function handleSetBrightness(
   ctx.settingsService.setBrightness(brightness);
   routerCtx.response.status = 200;
   routerCtx.response.body = { brightness };
+}
+
+async function handleGetWeather(routerCtx: RouterContext<"/api/weather:icao">) {
+  const ctx = routerCtx.state.context as AppContext;
+  const icao = routerCtx.params.icao;
+  const weather = ctx.weatherService.getWeather(icao);
+  routerCtx.response.body = weather;
 }

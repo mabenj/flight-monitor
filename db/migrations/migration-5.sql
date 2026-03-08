@@ -1,0 +1,4 @@
+ALTER TABLE airport ADD COLUMN metar TEXT;
+ALTER TABLE airport ADD COLUMN skyCondition TEXT;
+ALTER TABLE airport ADD COLUMN tempCelsius REAL;
+ALTER TABLE airport ADD COLUMN timestamp INTEGER;
