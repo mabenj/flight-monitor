@@ -6,11 +6,12 @@ import { FlightsService } from "../services/flights-service.ts";
 import { SettingsService } from "../services/settings-service.ts";
 import { config } from "../config.ts";
 
-const matrix = MatrixClient.getInstance();
+let matrix: MatrixClient;
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
 export async function sendFlightsToMatrix(db: DatabaseSync) {
+  matrix = MatrixClient.getInstance();
   const flightService = new FlightsService(db);
   const settingsService = new SettingsService(db);
   const flights = flightService.getActiveFlights();
