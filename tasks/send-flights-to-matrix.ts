@@ -196,9 +196,9 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
   const routeLong: TextCmd = {
     cmd: "text",
     text: `${
-      flight.origin?.name.replace("International Airport", "Intl.") ?? "N/A"
+      flight.origin?.name?.replace("International Airport", "Intl.") ?? "N/A"
     } - ${
-      flight.destination?.name.replace("International Airport", "Intl.") ??
+      flight.destination?.name?.replace("International Airport", "Intl.") ??
       "N/A"
     }`,
     y: 8,
