@@ -291,18 +291,13 @@ function formatDate(date: Date): string {
 }
 
 function formatPrices(prices: ElectricityPrice[]): string {
-  const pricesString =
-    "PS: " +
-    prices
-      .map((p) => {
-        const hour = new Date(p.startDate * 1000)
-          .getHours()
-          .toString()
-          .padStart(2, "0");
-        const price = p.price.toFixed(2);
-        return `${hour}:00 ${price}c/kWh`;
-      })
-      .join(", ");
+  const pricesString = prices
+    .map((p) => {
+      const hour = new Date(p.startDate * 1000).getHours();
+      const price = p.price.toFixed(1);
+      return `H${hour} ${price}c`;
+    })
+    .join("  ");
   return pricesString;
 }
 
