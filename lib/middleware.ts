@@ -23,7 +23,7 @@ export function contextMiddleware(ctx: AppContext): Middleware {
 export function loggingMiddleware(): Middleware {
   return async (ctx: Context, next: () => Promise<unknown>) => {
     const logger = new Log("api");
-    logger.info(`${ctx.request.method} ${ctx.request.url}`);
+    logger.info(`${ctx.request.method} ${ctx.request.url.pathname}`);
     await next();
   };
 }
@@ -57,13 +57,25 @@ export function corsMiddleware(): Middleware {
  */
 export function staticFilesMiddleware(): Middleware {
   return async (ctx: Context, next: () => Promise<unknown>) => {
-    try {
+    const pathname = ctx.request.url.pathname;
+    const hasExtension = pathname.split(".").length > 1;
+
+    if (hasExtension) {
+      // Looks like a real asset (.js, .css, .png, etc.) — serve it directly
+      try {
+        await ctx.send({
+          root: config.server.distDir,
+          index: "index.html",
+        });
+      } catch {
+        await next();
+      }
+    } else {
+      // No extension = likely a client-side route — always serve index.html
       await ctx.send({
         root: config.server.distDir,
-        index: "index.html",
+        path: "index.html",
       });
-    } catch {
-      await next();
     }
   };
 }

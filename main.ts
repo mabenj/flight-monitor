@@ -30,10 +30,10 @@ async function main() {
   app.use(loggingMiddleware());
   app.use(corsMiddleware());
   app.use(errorHandlingMiddleware());
-  app.use(staticFilesMiddleware());
   setupRoutes(router, appContext);
   app.use(router.routes());
   app.use(router.allowedMethods());
+  app.use(staticFilesMiddleware());
 
   scheduler.start();
 
