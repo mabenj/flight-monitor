@@ -204,7 +204,7 @@ export class FlightsService {
     const activeBoundsId = this.db
       .prepare("SELECT id FROM bounds WHERE isActive = 1 LIMIT 1")
       .get()?.id;
-    const unixTimestamp = Date.now() / 1000;
+    const unixTimestamp = Math.floor(Date.now() / 1000);
     for (const flight of flights) {
       if (!flight.id) {
         continue;
@@ -259,14 +259,19 @@ export class FlightsService {
       const existingFlightId = this.db
         .prepare("SELECT id FROM flight WHERE id = ? LIMIT 1")
         .get(rowValues.id)?.id;
-      let sql = "";
       if (existingFlightId) {
+        let sql = "";
         sql += "UPDATE flight SET ";
         sql += Object.keys(rowValues)
           .map((key) => `${key} = ?`)
           .join(", ");
         sql += ` WHERE id = ?`;
+        console.log(
+          `updating flight ${flight.flightNumber} timestamp ${unixTimestamp}`
+        );
+        this.db.prepare(sql).run(...Object.values(rowValues), existingFlightId);
       } else {
+        let sql = "";
         sql += "INSERT INTO flight (";
         sql += Object.keys(rowValues).join(", ");
         sql += ") VALUES (";
@@ -274,8 +279,15 @@ export class FlightsService {
           .map(() => "?")
           .join(", ");
         sql += ")";
+        console.log(
+          `adding flight ${flight.flightNumber} timestamp ${unixTimestamp}`
+        );
+        this.db.prepare(sql).run(...Object.values(rowValues));
       }
-      this.db.prepare(sql).run(...Object.values(rowValues));
+      const timestampInDb = this.db
+        .prepare("SELECT timestamp FROM flight WHERE id = ? LIMIT 1")
+        .get(rowValues.id)?.timestamp;
+      console.log(`timestamp in db ${timestampInDb}`);
     }
   }
 }
