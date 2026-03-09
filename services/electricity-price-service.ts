@@ -46,10 +46,10 @@ export class ElectricityPriceService {
     return cache.prices;
   }
 
-  async getCurrentAndUpcomingPrices(count = 4): Promise<ElectricityPrice[]> {
+  async getCurrentAndUpcomingPrices(count = 8): Promise<ElectricityPrice[]> {
     const prices = await this.getElectricityPrice();
-    const now = Math.floor(Date.now() / 1000);
-    const relevantPrices = prices.filter((price) => price.startDate >= now);
+    const cutoff = Math.floor(new Date().setMinutes(0, 0, 0) / 1000);
+    const relevantPrices = prices.filter((price) => price.startDate >= cutoff);
     return relevantPrices.slice(0, count);
   }
 }
