@@ -240,12 +240,25 @@ function formatTime(date: Date): string {
 }
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("fi-FI", {
+  const longDate = date.toLocaleDateString("fi-FI", {
     weekday: "short",
     day: "numeric",
     month: "numeric",
     year: "numeric",
   });
+  if (
+    longDate.length * config.matrix.displayFontWidthPx <
+    config.matrix.displayWidthPx - 4
+  ) {
+    return longDate;
+  }
+  const shortDate = date.toLocaleDateString("fi-FI", {
+    weekday: "short",
+    day: "numeric",
+    month: "numeric",
+    year: "2-digit",
+  });
+  return shortDate;
 }
 
 function flightToTextCmds(flight: Flight, index = 1, total = 1) {
