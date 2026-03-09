@@ -64,6 +64,7 @@ export const config = {
       airlineScrollFrameMs: 20,
       aircraftScrollFrameMs: 20,
       metarScrollFrameMs: 40,
+      priceScrollFrameMs: 40,
     },
     colors: {
       white: { r: 255, g: 255, b: 255 },
@@ -76,6 +77,7 @@ export const config = {
       blue: { r: 0, g: 0, b: 255 },
       yellow: { r: 255, g: 255, b: 0 },
     },
+    infoScrollEveryNFrames: 5,
   },
 
   validation: {

@@ -8,6 +8,8 @@ import { config } from "../config.ts";
 import { WeatherService } from "../services/weather-service.ts";
 import { BoundsService } from "../services/bounds-service.ts";
 import { Weather } from "../types/weather.ts";
+import { ElectricityPrice } from "../types/electricity-price.ts";
+import { ElectricityPriceService } from "../services/electricity-price-service.ts";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 interface DisplayContext {
@@ -16,6 +18,7 @@ interface DisplayContext {
   settingsService: SettingsService;
   weatherService: WeatherService;
   boundsService: BoundsService;
+  priceService: ElectricityPriceService;
 }
 
 let ctx: DisplayContext | null = null;
@@ -24,8 +27,7 @@ let ctx: DisplayContext | null = null;
  * to scroll the METAR or just show the static weather screen.
  */
 let callCount = 0;
-
-const METAR_SCROLL_EVERY_N_CALLS = 5;
+let lastInfo: "metar" | "prices" | null = null;
 
 function getContext(db: DatabaseSync): DisplayContext {
   if (!ctx) {
@@ -35,6 +37,7 @@ function getContext(db: DatabaseSync): DisplayContext {
       settingsService: new SettingsService(db),
       weatherService: new WeatherService(db),
       boundsService: new BoundsService(db),
+      priceService: new ElectricityPriceService(),
     };
   }
   return ctx;
@@ -47,6 +50,7 @@ export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
     settingsService,
     weatherService,
     boundsService,
+    priceService,
   } = getContext(db);
 
   callCount++;
@@ -54,16 +58,24 @@ export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
   let brightness = settingsService.getBrightness();
   await matrix.brightness(brightness);
 
-  const bounds = boundsService.getActive();
-  const weather: Weather | null = bounds?.airportCode
-    ? weatherService.getWeather(bounds.airportCode)
-    : null;
-
   let flights = flightService.getActiveFlights();
-
   if (flights.length === 0) {
-    const shouldScrollMetar = callCount % METAR_SCROLL_EVERY_N_CALLS === 0;
-    await showWeather(matrix, weather, shouldScrollMetar);
+    const bounds = boundsService.getActive();
+    const weather = bounds?.airportCode
+      ? weatherService.getWeather(bounds.airportCode)
+      : null;
+    const prices = await priceService.getCurrentAndUpcomingPrices();
+    const shouldScroll = callCount % config.matrix.infoScrollEveryNFrames === 0;
+    await showInfoScreen(
+      matrix,
+      weather,
+      prices,
+      shouldScroll && lastInfo === "prices",
+      shouldScroll && lastInfo === "metar"
+    );
+    if (shouldScroll) {
+      lastInfo = lastInfo === "metar" ? "prices" : "metar";
+    }
     return;
   }
 
@@ -78,15 +90,18 @@ export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
   }
 }
 
-async function showWeather(
+async function showInfoScreen(
   matrix: MatrixClient,
   weather: Weather | null,
-  scrollMetar: boolean
+  electricityPrices: ElectricityPrice[],
+  scrollMetar: boolean,
+  scrollPrices: boolean
 ): Promise<void> {
   const now = new Date();
 
   const timeString = formatTime(now);
   const dateString = formatDate(now);
+  const pricesString = formatPrices(electricityPrices);
   const tempC = `${weather?.tempCelsius ?? "--"}°C`;
 
   const timeCmd: TextCmd = {
@@ -126,6 +141,20 @@ async function showWeather(
       metarCmd,
       staticCmds,
       config.matrix.timing.metarScrollFrameMs
+    );
+  } else if (scrollPrices && electricityPrices.length > 0) {
+    const priceCmd: TextCmd = {
+      cmd: "text",
+      text: pricesString,
+      y: 29,
+      x: 2,
+      ...config.matrix.colors.grey,
+    };
+    await scrollLeft(
+      matrix,
+      priceCmd,
+      staticCmds,
+      config.matrix.timing.priceScrollFrameMs
     );
   } else {
     await hold(matrix, staticCmds, config.matrix.timing.holdMs);
@@ -259,6 +288,22 @@ function formatDate(date: Date): string {
     year: "2-digit",
   });
   return shortDate;
+}
+
+function formatPrices(prices: ElectricityPrice[]): string {
+  const pricesString =
+    "PS: " +
+    prices
+      .map((p) => {
+        const hour = new Date(p.startDate * 1000)
+          .getHours()
+          .toString()
+          .padStart(2, "0");
+        const price = p.price.toFixed(2);
+        return `${hour}:00 ${price}c/kWh`;
+      })
+      .join(", ");
+  return pricesString;
 }
 
 function flightToTextCmds(flight: Flight, index = 1, total = 1) {
