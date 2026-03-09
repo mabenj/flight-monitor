@@ -73,6 +73,8 @@ export const config = {
       orange: { r: 255, g: 165, b: 0 },
       grey: { r: 128, g: 128, b: 128 },
       red: { r: 255, g: 0, b: 0 },
+      blue: { r: 0, g: 0, b: 255 },
+      yellow: { r: 255, g: 255, b: 0 },
     },
   },
 
