@@ -99,4 +99,9 @@ export const config = {
     maxBytes: 10 * 1024 * 1024, // 10 MB per file
     maxBackupCount: 5,
   },
+
+  electricity: {
+    pricesUrl: "https://api.porssisahko.net/v1/latest-prices.json",
+    pricesCacheTtlMs: 60 * 60 * 1000, // 1 hour
+  },
 } as const;
