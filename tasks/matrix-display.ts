@@ -40,7 +40,7 @@ function getContext(db: DatabaseSync): DisplayContext {
   return ctx;
 }
 
-export async function sendFlightsToMatrix(db: DatabaseSync): Promise<void> {
+export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
   const {
     matrix,
     flightService,

@@ -3,7 +3,7 @@
  */
 
 import { scrapeActiveFlights } from "../tasks/scrape-active-flights.ts";
-import { sendFlightsToMatrix } from "../tasks/send-flights-to-matrix.ts";
+import { updateMatrixDisplay } from "../tasks/matrix-display.ts";
 import { AppContext } from "./context.ts";
 import Log from "./log.ts";
 import { config } from "../config.ts";
@@ -78,7 +78,7 @@ export class TaskScheduler {
   private startMatrixTask(): void {
     const runMatrixTask = async () => {
       try {
-        await sendFlightsToMatrix(this.ctx.db);
+        await updateMatrixDisplay(this.ctx.db);
       } catch (error) {
         this.logger.error("Matrix task failed", error);
       }
