@@ -5,6 +5,9 @@ import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix.ts";
 import { FlightsService } from "../services/flights-service.ts";
 import { SettingsService } from "../services/settings-service.ts";
 import { config } from "../config.ts";
+import { WeatherService } from "../services/weather-service.ts";
+import { BoundsService } from "../services/bounds-service.ts";
+import { Weather } from "../types/weather.ts";
 
 let matrix: MatrixClient;
 
@@ -14,12 +17,19 @@ export async function sendFlightsToMatrix(db: DatabaseSync) {
   matrix = MatrixClient.getInstance();
   const flightService = new FlightsService(db);
   const settingsService = new SettingsService(db);
-  const flights = flightService.getActiveFlights();
+  const weatherService = new WeatherService(db);
+  const boundsService = new BoundsService(db);
 
+  const flights = flightService.getActiveFlights();
   const brightness = settingsService.getBrightness();
+  const bounds = boundsService.getActive();
+  let weather: Weather | null = null;
+  if (bounds?.airportCode) {
+    weather = weatherService.getWeather(bounds.airportCode);
+  }
   await matrix.brightness(brightness);
   if (flights.length === 0) {
-    await showMetar();
+    await showWeather(weather);
   }
   for (let i = 0; i < flights.length; i++) {
     await showFlight(flights[i], i + 1, flights.length);
@@ -120,16 +130,13 @@ async function showFlight(flight: Flight, index: number, total: number) {
   await sleep(config.matrix.timing.betweenScrollsMs);
 }
 
-async function showMetar() {
-  // TODO: fetch real METAR data
-  const metarString =
-    "METAR KJFK 121651Z 18015KT 10SM FEW020 SCT250 30/22 A2992 RMK AO2 SLP132 T03000217";
+async function showWeather(weather: Weather | null) {
   const now = new Date();
   const timeString = `${now.getHours().toString().padStart(2, "0")}:${now
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
-  const tempC = "-30°C";
+  const tempC = `${weather?.tempCelsius}°C`;
   const dateString = now.toLocaleDateString("fi-FI", {
     weekday: "short",
     day: "numeric",
@@ -142,7 +149,7 @@ async function showMetar() {
     text: timeString,
     y: 8,
     x: 2,
-    ...config.matrix.colors.cyan,
+    ...config.matrix.colors.magenta,
   };
   const tempCmd: TextCmd = {
     cmd: "text",
@@ -156,11 +163,11 @@ async function showMetar() {
     text: dateString,
     y: 15,
     x: 2,
-    ...config.matrix.colors.magenta,
+    ...config.matrix.colors.cyan,
   };
   const metarCmd: TextCmd = {
     cmd: "text",
-    text: metarString,
+    text: weather?.metar ?? "",
     y: 29,
     x: 2,
     ...config.matrix.colors.grey,
