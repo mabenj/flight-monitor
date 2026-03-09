@@ -266,9 +266,7 @@ export class FlightsService {
           .map((key) => `${key} = ?`)
           .join(", ");
         sql += ` WHERE id = ?`;
-        console.log(
-          `updating flight ${flight.flightNumber} timestamp ${unixTimestamp}`
-        );
+
         this.db.prepare(sql).run(...Object.values(rowValues), existingFlightId);
       } else {
         let sql = "";
@@ -279,15 +277,9 @@ export class FlightsService {
           .map(() => "?")
           .join(", ");
         sql += ")";
-        console.log(
-          `adding flight ${flight.flightNumber} timestamp ${unixTimestamp}`
-        );
+
         this.db.prepare(sql).run(...Object.values(rowValues));
       }
-      const timestampInDb = this.db
-        .prepare("SELECT timestamp FROM flight WHERE id = ? LIMIT 1")
-        .get(rowValues.id)?.timestamp;
-      console.log(`timestamp in db ${timestampInDb}`);
     }
   }
 }
