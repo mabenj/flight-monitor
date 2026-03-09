@@ -347,9 +347,7 @@ export default function BoundsDetail({
 
             <div className="space-y-3 rounded-md border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">
-                  Coordinates
-                </span>
+                <span className="text-sm font-medium">Coordinates</span>
                 <span className="text-xs text-slate-500">
                   Auto-updated from the map
                 </span>

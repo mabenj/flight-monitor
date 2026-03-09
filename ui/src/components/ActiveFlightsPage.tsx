@@ -1,7 +1,6 @@
 /* eslint-disable react-hooks/purity */
 import useActiveFlights from "@/hooks/useActiveFlights.ts";
-import { Spinner } from "@/components/ui/spinner.tsx";
-import { prettyNumber } from "../lib/utils.ts";
+import { prettyNumber, timeAgo } from "../lib/utils.ts";
 import useBounds from "../hooks/useBounds.ts";
 import { useMemo } from "react";
 import useWeather from "../hooks/useWeather.ts";
@@ -53,11 +52,7 @@ function getSkyConditionIcon(condition: string): string {
 
 function WeatherCard({ weather }: { weather: Weather }) {
   const metarAge = useMemo(() => {
-    const diffMs = Date.now() - weather.timestamp * 1000;
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return "just now";
-    if (diffMin === 1) return "1 min ago";
-    return `${diffMin} min ago`;
+    return timeAgo(new Date(weather.timestamp * 1000));
   }, [weather.timestamp]);
 
   const isStale = Date.now() - weather.timestamp * 1000 > 60 * 60 * 1000;
@@ -139,7 +134,7 @@ function WeatherCard({ weather }: { weather: Weather }) {
           <div className="min-w-0">
             <p className="text-xs text-slate-400 leading-none mb-0.5">METAR</p>
             <p
-              className="text-xs font-mono text-slate-600 truncate max-w-xs cursor-help"
+              className="text-xs font-mono text-slate-600"
               title={weather.metar}
             >
               {weather.metar}
@@ -152,23 +147,23 @@ function WeatherCard({ weather }: { weather: Weather }) {
 }
 
 export default function ActiveFlightsPage() {
-  const { flights, loading, error } = useActiveFlights();
+  const { flights, error } = useActiveFlights();
   const { bounds } = useBounds();
   const weather: Weather | null = useWeather();
   const activeBounds = useMemo(() => bounds?.find((b) => b.isActive), [bounds]);
+  const { flightsUpdatedAt, areFlightsStale } = useMemo(() => {
+    const timestamps = flights.map((f) => f.timestamp);
+    const latest = new Date(Math.max(...timestamps) * 1000);
+    return {
+      flightsUpdatedAt: timeAgo(latest),
+      areFlightsStale: Date.now() - latest.getTime() > 10 * 1000, // 10 seconds
+    };
+  }, [flights]);
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-full text-slate-500">
         {error}
-      </div>
-    );
-  }
-
-  if (loading && flights.length === 0 && !error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner />
       </div>
     );
   }
@@ -181,7 +176,7 @@ export default function ActiveFlightsPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              Active Flights
+              Active flights
             </h1>
             {activeBounds && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
@@ -200,19 +195,22 @@ export default function ActiveFlightsPage() {
         </div>
 
         {/* Right: live indicator */}
-        {!loading && (
+        {areFlightsStale && (
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+            </span>
+            Flights updated {flightsUpdatedAt}
+          </div>
+        )}
+        {!areFlightsStale && (
           <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            Live
-          </div>
-        )}
-        {loading && (
-          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
-            <Spinner className="w-3 h-3" />
-            Updating…
+            Flights live
           </div>
         )}
       </div>
@@ -240,8 +238,8 @@ export default function ActiveFlightsPage() {
                 <Th center>Alt.</Th>
                 <Th center>Spd.</Th>
                 <Th center>Hdg.</Th>
-                <Th center>Departed</Th>
-                <Th center>Arrives</Th>
+                <Th center>Departure</Th>
+                <Th center>Arrival</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
