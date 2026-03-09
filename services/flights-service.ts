@@ -29,7 +29,7 @@ export class FlightsService {
         LEFT JOIN airport as d ON f.destinationAirportId = d.id
     `;
     const rows = this.db.prepare(sql).all();
-    return rows.map((row) => ({
+    const flights: Flight[] = rows.map((row) => ({
       id: row.id as string,
       callsign: row.callsign as string,
       flightNumber: row.flightNumber as string,
@@ -68,6 +68,7 @@ export class FlightsService {
         name: row.destinationName as string,
       },
     }));
+    return sortFlights(flights);
   }
 
   setActiveFlights(flights: Flight[]) {
@@ -296,4 +297,18 @@ function toStringOrNull(input: unknown): string | null {
     return input;
   }
   return null;
+}
+
+function sortFlights(flights: Flight[], now: number = Date.now()): Flight[] {
+  return [...flights].sort((a, b) => {
+    const aDep = a.departureTime.scheduled;
+    const aArr = a.arrivalTime.scheduled;
+    const bDep = b.departureTime.scheduled;
+    const bArr = b.arrivalTime.scheduled;
+
+    const aClosest = Math.min(Math.abs(aDep - now), Math.abs(aArr - now));
+    const bClosest = Math.min(Math.abs(bDep - now), Math.abs(bArr - now));
+
+    return aClosest - bClosest;
+  });
 }
