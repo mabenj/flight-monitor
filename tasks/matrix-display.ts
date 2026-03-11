@@ -277,7 +277,7 @@ function formatDate(date: Date): string {
   });
   if (
     longDate.length * config.matrix.displayFontWidthPx <
-    config.matrix.displayWidthPx - 4
+    config.matrix.displayWidthPx - 2
   ) {
     return longDate;
   }
@@ -293,7 +293,10 @@ function formatDate(date: Date): string {
 function formatPrices(prices: ElectricityPrice[]): string {
   const pricesString = prices
     .map((p) => {
-      const hour = new Date(p.startDate * 1000).getHours();
+      const hour = new Date(p.startDate * 1000)
+        .getHours()
+        .toString()
+        .padStart(2, "0");
       const price = p.price.toFixed(1);
       return `H${hour} ${price}c`;
     })
