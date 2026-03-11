@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { formatAltitude, sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
-import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix.ts";
+import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix-client.ts";
 import { FlightsService } from "../services/flights-service.ts";
 import { SettingsService } from "../services/settings-service.ts";
 import { config } from "../config.ts";
