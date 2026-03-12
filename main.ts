@@ -1,4 +1,4 @@
-import { Application, Router, RouterContext, Context } from "@oak/oak";
+import { Application, Router, Context } from "@oak/oak";
 import { DatabaseSync } from "node:sqlite";
 import { Database } from "./db/database.ts";
 import { AppContext } from "./lib/context.ts";
@@ -12,7 +12,7 @@ import {
 import { setupRoutes } from "./lib/routes.ts";
 import { ApiError } from "./lib/errors.ts";
 import Log from "./lib/log.ts";
-import { MatrixClient } from "./rgb-matrix/matrix.ts";
+import { MatrixClient } from "./rgb-matrix/matrix-client.ts";
 import { config } from "./config.ts";
 
 async function main() {
