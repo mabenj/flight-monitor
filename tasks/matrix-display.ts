@@ -1,4 +1,3 @@
-import { DatabaseSync } from "node:sqlite";
 import { formatAltitude, sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix.ts";
@@ -10,6 +9,7 @@ import { BoundsService } from "../services/bounds-service.ts";
 import { Weather } from "../types/weather.ts";
 import { ElectricityPrice } from "../types/electricity-price.ts";
 import { ElectricityPriceService } from "../services/electricity-price-service.ts";
+import { DatabaseSync } from "node:sqlite";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 interface DisplayContext {
@@ -315,9 +315,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const routeShort: TextCmd = {
     cmd: "text",
-    text: `${flight.origin?.iata ?? "N/A"}-${
-      flight.destination?.iata ?? "N/A"
-    }`,
+    text: `${flight.origin?.iata ?? "NA"}-${flight.destination?.iata ?? "NA"}`,
     y: 8,
     x: 2,
     ...config.matrix.colors.magenta,
@@ -335,7 +333,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const flightNumber: TextCmd = {
     cmd: "text",
-    text: flight.flightNumber ?? flight.callsign ?? "N/A",
+    text: flight.flightNumber ?? flight.aircraft?.registration ?? "NA",
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
@@ -343,7 +341,9 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const airlineAndCallsign: TextCmd = {
     cmd: "text",
-    text: `${flight.airline?.name ?? "N/A"} ${flight.callsign ?? "N/A"}`,
+    text: `${flight.airline?.name} ${
+      flight.callsign ?? flight.aircraft?.registration ?? "NA"
+    }`,
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
@@ -351,7 +351,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const aircraftShort: TextCmd = {
     cmd: "text",
-    text: flight.aircraft?.modelCode ?? flight.aircraft?.registration ?? "N/A",
+    text: flight.aircraft?.modelCode ?? flight.aircraft?.registration ?? "NA",
     y: 22,
     x: 2,
     ...config.matrix.colors.cyan,
@@ -363,7 +363,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
       flight.aircraft?.modelText ??
       flight.aircraft?.modelCode ??
       flight.aircraft?.registration ??
-      "N/A",
+      "NA",
     y: 22,
     x: 2,
     ...config.matrix.colors.cyan,
@@ -390,5 +390,5 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 }
 
 function normalizeAirportName(name: string | undefined | null): string {
-  return name?.replace("International Airport", "Intl.") ?? "N/A";
+  return name?.replace("International Airport", "Intl.") ?? "NA";
 }
