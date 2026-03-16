@@ -1,6 +1,6 @@
-# FlightTracker
+# Flight monitor
 
-A hobby project for tracking flights that fly over user-defined geographic bounding boxes (e.g., my apartment) and displaying them on an RGB LED matrix.
+A hobby project for detecting flights that fly over user-defined geographic bounding boxes (e.g., my apartment) and displaying them on an RGB LED matrix.
 
 Consists of a Deno server and a Python daemon that drives the LED matrix. The deno server handles serving a configuration UI (React), scraping and persisting the flight data, and communicating with the Python daemon.
 
@@ -8,10 +8,9 @@ Consists of a Deno server and a Python daemon that drives the LED matrix. The de
 
 **_Please don't judge the cardbox case, a wooden one is under construction_** 😅
 
-When there are flights, the details of each flight are displayed one by one. Details include:
+When there are active flights inside the configured bounding box, the details of each flight are displayed one by one. Details include:
 
-- Origin airport
-- Destination airport
+- Origin and destination airports
 - Flight number
 - Airline & callsign
 - Aircraft model type
@@ -19,7 +18,7 @@ When there are flights, the details of each flight are displayed one by one. Det
 
 <video src="media/demo1.mp4" width="720" controls></video>
 
-When there are no flights, the current date & time are displayed along with a reference airport temperature and METAR. In addition, the Finnish electricity prices (pörssisähkö) for the next 8 hours are displayed as a scrolling list after the METAR.
+When there are no flights, the current date & time are displayed along with a reference airport's temperature and METAR (weather report). In addition, the Finnish electricity prices (pörssisähkö) for the next 8 hours are displayed as a scrolling list after the METAR.
 
 <video src="media/demo2.mp4" width="720" controls></video>
 
@@ -29,13 +28,61 @@ When there are no flights, the current date & time are displayed along with a re
 - 32x64 RGB LED Matrix from AliExpress
 - Adafruit RGB Matrix Bonnet + 5V/2A power supply
 
-<img src="media/hardware.jpg" width="600px" alt="Architecture overview" align="center">
+<img src="media/hardware-2.jpg" width="600px" alt="Architecture overview" align="center">
 
 ## Software
 
-- Deno
-- Python 3 and [hzeller/rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix) library
+- **Backend:** Deno (using Oak framework)
+- **Frontend:** React + TypeScript + Vite
+- **Database:** SQLite
+- **LED Matrix:** Python 3 with [hzeller/rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix) library
+
+### Data Source
+
+Flight data is scraped from the Flightradar24 API (unofficial). The server polls for real-time flights in a user-defined bounding box. The data is stored in a SQLite database and persisted across restarts.
 
 ### High-level architecture
 
 <img src="media/architecture-overview.svg" width="600px" alt="Architecture overview" align="center">
+
+## Setup
+
+### Prerequisites
+
+- Deno
+- Python 3
+- Raspberry Pi with a RGB LED matrix (or development machine for testing)
+
+### Install Dependencies
+
+```bash
+# Install Python LED matrix library
+# Follow instructions for installing the Python bindings at: https://github.com/hzeller/rpi-rgb-led-matrix/tree/master/bindings/python
+
+# Install Deno dependencies
+deno install
+
+# Build the UI and serve the application
+deno run build:ui
+deno run --allow-all main.ts
+```
+
+Note: building the UI with `deno run build:ui` can be a heavy operation on a Raspberry Pi and it might not complete at all. You can alternatively also build it on a more powerful machine and transfer the resulting `dist` directory to the Raspberry Pi.
+
+### Configuration
+
+Configuration of the server is done via the `config.ts` file in the project root.
+
+Configuration of the client UI is done via the `ui/config-ui.ts` file. The UI configuration expects a Mapbox access token set in the environment variable `VITE_MAPBOX_ACCESS_TOKEN`.
+
+**UI Configuration:** Access the web UI to configure:
+
+- Bounding box coordinates for flight detection
+- Reference airport for METAR/weather data
+- Display brightness
+
+The configuration is stored in SQLite and persists across restarts.
+
+## License
+
+MIT License
