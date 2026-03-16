@@ -344,7 +344,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const airlineAndCallsign: TextCmd = {
     cmd: "text",
-    text: `${flight.airline?.name} ${
+    text: `${flight.airline?.name ?? ""} ${
       flight.callsign ?? flight.aircraft?.registration ?? "NA"
     }`,
     y: 15,
