@@ -2,7 +2,7 @@
 
 A hobby project for detecting flights that fly over user-defined geographic bounding boxes (e.g., my apartment) and displaying them on an RGB LED matrix.
 
-Consists of a Deno server and a Python daemon that drives the LED matrix. The deno server handles serving a configuration UI (React), scraping and persisting the flight data, and communicating with the Python daemon.
+Consists of a Deno server and a Python daemon that drives the LED matrix. The deno server handles serving a configuration UI (React), fetching and persisting the flight data, and communicating with the Python daemon.
 
 ## Demo
 
@@ -39,7 +39,7 @@ https://github.com/user-attachments/assets/746f5c15-38d1-4411-a9bc-81525643610c
 
 ### Data Source
 
-Flight data is scraped from the Flightradar24 API (unofficial). The server polls for real-time flights in a user-defined bounding box. The data is stored in a SQLite database and persisted across restarts.
+The server polls for real-time flights and their details in a user-defined bounding box via unofficial Flightradar24 API. The data is stored in a SQLite database and persisted across restarts.
 
 ### High-level architecture
 
@@ -67,7 +67,7 @@ deno run build:ui
 deno run --allow-all main.ts
 ```
 
-Note: building the UI with `deno run build:ui` can be a heavy operation on a Raspberry Pi and it might not complete at all. You can alternatively also build it on a more powerful machine and transfer the resulting `dist` directory to the Raspberry Pi.
+Note: building the UI with `deno run build:ui` can be a heavy operation on a Raspberry Pi and it might not even complete at all due to Pi's limited memory. You can alternatively build it on a more powerful machine and transfer the resulting `dist` directory to the Raspberry Pi.
 
 ### Configuration
 
