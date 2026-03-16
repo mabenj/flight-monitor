@@ -3,6 +3,7 @@ import mapboxgl, { GeoJSONSource, MapMouseEvent } from "mapbox-gl";
 import { useCallback, useEffect, useRef } from "react";
 import { Button } from "./ui/button.tsx";
 import { LocateIcon, SquareDashedIcon, XIcon } from "lucide-react";
+import { config } from "../../config-ui.ts";
 
 interface Props {
   selectedId: number | null;
@@ -161,13 +162,12 @@ export default function Map({
   }, [diagonal]);
 
   useEffect(() => {
-    if (!import.meta.env.VITE_MAPBOX_ACCESS_TOKEN) {
-      throw new Error("VITE_MAPBOX_ACCESS_TOKEN is not set");
+    if (!config.mapBoxAccessToken) {
+      return;
     }
-
     const map = new mapboxgl.Map({
       container: mapContainerRef.current!,
-      accessToken: import.meta.env.VITE_MAPBOX_ACCESS_TOKEN,
+      accessToken: config.mapBoxAccessToken,
       style: STYLES.satellite,
       antialias: true,
       attributionControl: false,
@@ -325,6 +325,11 @@ export default function Map({
 
   return (
     <div className="relative h-150 w-full overflow-hidden rounded-md border border-slate-200 bg-slate-100">
+      {!config.mapBoxAccessToken && (
+        <div className="flex items-center justify-center h-full text-slate-500">
+          Missing Mapbox access token
+        </div>
+      )}
       <div
         ref={mapContainerRef}
         id="map-container"
