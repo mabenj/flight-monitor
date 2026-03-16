@@ -10,6 +10,7 @@ import ActiveFlightsPage from "./components/ActiveFlightsPage.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { SquareStackIcon, Plane } from "lucide-react";
 import BoundsPage from "./components/BoundsPage.tsx";
+import logo from "./assets/logo.png";
 
 function Navigation() {
   const location = useLocation();
@@ -36,7 +37,12 @@ function AppContent() {
   return (
     <div className="flex h-dvh flex-col bg-slate-50">
       <header className="flex items-center justify-between border-b bg-white px-6 py-3">
-        <h1 className="text-lg font-semibold text-slate-900">Flight Tracker</h1>
+        <Link to="/" className="flex items-center gap-2">
+          <img src={logo} alt="Logo" className="h-6 w-6" />
+          <h1 className="text-lg font-semibold text-slate-900">
+            Flight monitor
+          </h1>
+        </Link>
         <Navigation />
       </header>
 
