@@ -1,0 +1,16 @@
+[Unit]
+Description=Flight monitor
+Wants=network-online.target
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/git/flight-monitor
+ExecStart=/home/pi/.deno/bin/deno run -A main.ts
+Restart=on-failure
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
