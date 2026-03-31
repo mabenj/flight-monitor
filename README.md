@@ -6,8 +6,6 @@ Consists of a Deno server and a Python daemon that drives the LED matrix. The de
 
 ## Demo
 
-**_Please don't judge the cardbox case, a wooden one is under construction_** 😅
-
 When there are active flights inside the configured bounding box, the details of each flight are displayed one by one. Details include:
 
 - Origin and destination airports
@@ -16,11 +14,16 @@ When there are active flights inside the configured bounding box, the details of
 - Aircraft model type
 - Altitude
 
-https://github.com/user-attachments/assets/090b7a04-0836-4ee4-9c92-6804ea2b8902
+
+https://github.com/user-attachments/assets/83294cc9-a97f-4cb7-81d0-6f64be2e92e8
 
 When there are no flights, the current date & time are displayed along with a reference airport's temperature and METAR (weather report). In addition, the Finnish electricity prices (pörssisähkö) for the next 8 hours are displayed as a scrolling list after the METAR.
 
-https://github.com/user-attachments/assets/746f5c15-38d1-4411-a9bc-81525643610c
+
+
+https://github.com/user-attachments/assets/a7e1f7f0-b0d1-485a-a2a7-5d1c9b6a4a50
+
+
 
 ## Hardware
 
