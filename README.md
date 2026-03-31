@@ -14,16 +14,11 @@ When there are active flights inside the configured bounding box, the details of
 - Aircraft model type
 - Altitude
 
-
-https://github.com/user-attachments/assets/83294cc9-a97f-4cb7-81d0-6f64be2e92e8
+https://github.com/user-attachments/assets/edf8e38d-aae8-430e-9075-67d9735ad0c6
 
 When there are no flights, the current date & time are displayed along with a reference airport's temperature and METAR (weather report). In addition, the Finnish electricity prices (pörssisähkö) for the next 8 hours are displayed as a scrolling list after the METAR.
 
-
-
-https://github.com/user-attachments/assets/a7e1f7f0-b0d1-485a-a2a7-5d1c9b6a4a50
-
-
+https://github.com/user-attachments/assets/ee900ffc-51d9-4ed7-9563-dd0824465d0f
 
 ## Hardware
 
