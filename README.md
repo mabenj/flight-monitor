@@ -30,8 +30,11 @@ https://github.com/user-attachments/assets/a7e1f7f0-b0d1-485a-a2a7-5d1c9b6a4a50
 - Raspberry Pi 3 Model A+
 - 32x64 RGB LED Matrix from AliExpress
 - Adafruit RGB Matrix Bonnet + 5V/2A power supply
+- A wooden box
 
-<img src="media/hardware-2.jpg" width="600px" alt="Architecture overview" align="center">
+<img src="media/hardware.jpg" width="600px" alt="Hardware" align="center">
+
+<img src="media/hardware-2.jpg" width="600px" alt="Hardware 2" align="center">
 
 ## Software
 
