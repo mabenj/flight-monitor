@@ -1,4 +1,5 @@
 import { DatabaseSync, SQLOutputValue } from "node:sqlite";
+import { MatrixClient } from "../rgb-matrix/matrix-client.ts";
 
 export class SettingsService {
   constructor(private readonly db: DatabaseSync) {}
@@ -23,5 +24,9 @@ export class SettingsService {
 
   setBrightness(brightness: number): void {
     this.set("brightness", brightness.toString());
+    const matrix = MatrixClient.getInstance();
+    if (matrix.isAvailable()) {
+      matrix.brightness(brightness);
+    }
   }
 }

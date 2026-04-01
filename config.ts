@@ -65,6 +65,8 @@ export const config = {
       aircraftScrollFrameMs: 20,
       metarScrollFrameMs: 40,
       priceScrollFrameMs: 50,
+      scheduleScrollFrameMs: 20,
+      speedAndHeadingScrollFrameMs: 20,
     },
     colors: {
       white: { r: 255, g: 255, b: 255 },

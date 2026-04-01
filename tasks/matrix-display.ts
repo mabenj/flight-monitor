@@ -1,4 +1,4 @@
-import { formatAltitude, sleep } from "../lib/utils.ts";
+import { prettyNumber, sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix-client.ts";
 import { FlightsService } from "../services/flights-service.ts";
@@ -44,19 +44,10 @@ function getContext(db: DatabaseSync): DisplayContext {
 }
 
 export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
-  const {
-    matrix,
-    flightService,
-    settingsService,
-    weatherService,
-    boundsService,
-    priceService,
-  } = getContext(db);
+  const { matrix, flightService, weatherService, boundsService, priceService } =
+    getContext(db);
 
   callCount++;
-
-  let brightness = settingsService.getBrightness();
-  await matrix.brightness(brightness);
 
   let flights = flightService.getActiveFlights();
   if (flights.length === 0) {
@@ -84,8 +75,6 @@ export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
     if (i >= flights.length) {
       break;
     }
-    brightness = settingsService.getBrightness();
-    await matrix.brightness(brightness);
     await showFlight(matrix, flights[i], i + 1, flights.length);
   }
 }
@@ -181,19 +170,23 @@ async function showFlight(
   await hold(matrix, staticFrame, config.matrix.timing.holdMs);
   await sleep(config.matrix.timing.betweenScrollsMs);
 
-  await scrollLeft(
-    matrix,
-    cmds.routeLong,
-    [cmds.flightNumber, aircraftForStatic, cmds.altitude],
-    config.matrix.timing.routeScrollFrameMs
-  );
+  if (flight.origin?.name || flight.destination?.name) {
+    await scrollLeft(
+      matrix,
+      cmds.routeLong,
+      [cmds.flightNumber, aircraftForStatic, cmds.altitude],
+      config.matrix.timing.routeScrollFrameMs
+    );
+  }
 
-  await scrollLeft(
-    matrix,
-    cmds.airlineAndCallsign,
-    [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
-    config.matrix.timing.airlineScrollFrameMs
-  );
+  if (cmds.airlineAndCallsign.text.trim()) {
+    await scrollLeft(
+      matrix,
+      cmds.airlineAndCallsign,
+      [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
+      config.matrix.timing.airlineScrollFrameMs
+    );
+  }
 
   if (needsScroll(cmds.aircraftLong)) {
     await scrollLeft(
@@ -201,6 +194,24 @@ async function showFlight(
       cmds.aircraftLong,
       [cmds.flightCount, cmds.routeShort, cmds.flightNumber, cmds.altitude],
       config.matrix.timing.aircraftScrollFrameMs
+    );
+  }
+
+  if (cmds.speedAndHeading.text.trim()) {
+    await scrollLeft(
+      matrix,
+      cmds.speedAndHeading,
+      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
+      config.matrix.timing.speedAndHeadingScrollFrameMs
+    );
+  }
+
+  if (cmds.schedule.text.trim()) {
+    await scrollLeft(
+      matrix,
+      cmds.schedule,
+      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
+      config.matrix.timing.scheduleScrollFrameMs
     );
   }
 
@@ -304,6 +315,49 @@ function formatPrices(prices: ElectricityPrice[]): string {
   return pricesString;
 }
 
+function getFlightScheduleText(flight: Flight): string {
+  const departureTime =
+    flight.departureTime?.actual ??
+    flight.departureTime?.estimated ??
+    flight.departureTime?.scheduled;
+  const arrivalTime =
+    flight.arrivalTime?.actual ??
+    flight.arrivalTime?.estimated ??
+    flight.arrivalTime?.scheduled;
+
+  if (!departureTime && !arrivalTime) {
+    return "";
+  }
+
+  const now = Date.now() / 1000;
+  const deltaDeparture = Math.abs(now - (departureTime ?? now));
+  const deltaArrival = Math.abs(now - (arrivalTime ?? now));
+
+  if (departureTime && deltaDeparture < deltaArrival) {
+    if (deltaDeparture < 60) {
+      return "DEPARTING NOW";
+    }
+    if (flight.departureTime?.actual) {
+      return `DEPARTED ${formatSeconds(deltaDeparture)} AGO`;
+    }
+    if (flight.departureTime?.estimated) {
+      return `DEPARTING IN ${formatSeconds(deltaDeparture)} (est.)`;
+    }
+    return `DEPARTING IN ${formatSeconds(deltaDeparture)}`;
+  }
+
+  if (deltaArrival < 60) {
+    return "LANDING NOW";
+  }
+  if (flight.arrivalTime?.actual) {
+    return `LANDED ${formatSeconds(deltaArrival)} AGO`;
+  }
+  if (flight.arrivalTime?.estimated) {
+    return `LANDING IN ${formatSeconds(deltaArrival)} (est.)`;
+  }
+  return `LANDING IN ${formatSeconds(deltaArrival)}`;
+}
+
 function flightToTextCmds(flight: Flight, index = 1, total = 1) {
   const countText = total > 1 ? `${index}/${total}` : "";
 
@@ -318,7 +372,9 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const routeShort: TextCmd = {
     cmd: "text",
-    text: `${flight.origin?.iata ?? "NA"}-${flight.destination?.iata ?? "NA"}`,
+    text: `${flight.origin?.iata ?? "???"}-${
+      flight.destination?.iata ?? "???"
+    }`,
     y: 8,
     x: 2,
     ...config.matrix.colors.magenta,
@@ -336,7 +392,8 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const flightNumber: TextCmd = {
     cmd: "text",
-    text: flight.flightNumber ?? flight.aircraft?.registration ?? "NA",
+    text:
+      flight.flightNumber ?? flight.aircraft?.registration ?? "Unknown flight",
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
@@ -345,8 +402,8 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
   const airlineAndCallsign: TextCmd = {
     cmd: "text",
     text: `${flight.airline?.name ?? ""} ${
-      flight.callsign ?? flight.aircraft?.registration ?? "NA"
-    }`,
+      flight.callsign ?? flight.aircraft?.registration ?? ""
+    }`.replace("Blocked", ""),
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
@@ -354,7 +411,10 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const aircraftShort: TextCmd = {
     cmd: "text",
-    text: flight.aircraft?.modelCode ?? flight.aircraft?.registration ?? "NA",
+    text:
+      flight.aircraft?.modelCode ??
+      flight.aircraft?.registration ??
+      "Unknown aircraft",
     y: 22,
     x: 2,
     ...config.matrix.colors.cyan,
@@ -366,7 +426,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
       flight.aircraft?.modelText ??
       flight.aircraft?.modelCode ??
       flight.aircraft?.registration ??
-      "NA",
+      "",
     y: 22,
     x: 2,
     ...config.matrix.colors.cyan,
@@ -374,7 +434,26 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const altitude: TextCmd = {
     cmd: "text",
-    text: flight.altitude > 0 ? formatAltitude(flight.altitude) : "ON GROUND",
+    text:
+      flight.altitude > 0 ? `${prettyNumber(flight.altitude)}ft` : "ON GROUND",
+    y: 29,
+    x: 2,
+    ...config.matrix.colors.green,
+  };
+
+  const speedAndHeading: TextCmd = {
+    cmd: "text",
+    text: `${flight.groundSpeed > 0 ? `${flight.groundSpeed}kts ` : ""}${
+      flight.heading > 0 ? `${flight.heading}°` : ""
+    }`,
+    y: 29,
+    x: 2,
+    ...config.matrix.colors.green,
+  };
+
+  const schedule: TextCmd = {
+    cmd: "text",
+    text: getFlightScheduleText(flight),
     y: 29,
     x: 2,
     ...config.matrix.colors.green,
@@ -389,9 +468,27 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     aircraftShort,
     aircraftLong,
     altitude,
+    schedule,
+    speedAndHeading,
   };
 }
 
 function normalizeAirportName(name: string | undefined | null): string {
-  return name?.replace("International Airport", "Intl.") ?? "NA";
+  return name?.replace("International Airport", "Intl.") ?? "Unknown airport";
+}
+
+function formatSeconds(seconds: number): string {
+  const totalMinutes = Math.floor(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes}min`;
+  }
+
+  if (minutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${minutes}min`;
 }
