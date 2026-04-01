@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import { Flight } from "../types/flight.ts";
 import { distinctBy } from "../lib/utils.ts";
 
@@ -167,12 +167,21 @@ export class FlightsService {
       .map((flight) => flight.aircraft)
       .filter((aircraft) => !!aircraft);
     for (const aircraft of aircrafts) {
-      if (!aircraft.registration) {
+      if (!aircraft.registration && !aircraft.modelCode) {
         continue;
       }
-      const existingAircraft = this.db
-        .prepare("SELECT * FROM aircraft WHERE registration = ? LIMIT 1")
-        .get(aircraft.registration);
+      let existingAircraft: Record<string, SQLOutputValue> | undefined;
+      if (aircraft.registration) {
+        existingAircraft = this.db
+          .prepare("SELECT * FROM aircraft WHERE registration = ? LIMIT 1")
+          .get(aircraft.registration);
+      } else if (aircraft.modelCode) {
+        existingAircraft = this.db
+          .prepare(
+            "SELECT * FROM aircraft WHERE modelCode = ? AND registration IS NULL LIMIT 1"
+          )
+          .get(aircraft.modelCode);
+      }
       if (existingAircraft) {
         this.db
           .prepare(
