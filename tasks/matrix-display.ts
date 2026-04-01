@@ -489,12 +489,12 @@ function formatSeconds(seconds: number): string {
   const minutes = totalMinutes % 60;
 
   if (hours === 0) {
-    return `${minutes}min`;
+    return `${minutes} min`;
   }
 
   if (minutes === 0) {
-    return `${hours}h`;
+    return `${hours} h`;
   }
 
-  return `${hours}h ${minutes}min`;
+  return `${hours} h ${minutes} min`;
 }
