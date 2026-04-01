@@ -338,7 +338,7 @@ function getFlightScheduleText(flight: Flight): string {
       return "Departing now";
     }
     if (flight.departureTime?.actual) {
-      return `Departed ${formatSeconds(deltaDeparture)}`;
+      return `Departed ${formatSeconds(deltaDeparture)} ago`;
     }
     if (flight.departureTime?.estimated) {
       return `Departing in ${formatSeconds(deltaDeparture)} (est.)`;
