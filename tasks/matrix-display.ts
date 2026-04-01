@@ -1,4 +1,4 @@
-import { prettyNumber, sleep } from "../lib/utils.ts";
+import { sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix-client.ts";
 import { FlightsService } from "../services/flights-service.ts";
@@ -335,27 +335,31 @@ function getFlightScheduleText(flight: Flight): string {
 
   if (departureTime && deltaDeparture < deltaArrival) {
     if (deltaDeparture < 60) {
-      return "DEPARTING NOW";
+      return "Departing now";
     }
     if (flight.departureTime?.actual) {
-      return `DEPARTED ${formatSeconds(deltaDeparture)} AGO`;
+      return `Departed ${formatSeconds(deltaDeparture)}`;
     }
     if (flight.departureTime?.estimated) {
-      return `DEPARTING IN ${formatSeconds(deltaDeparture)} (est.)`;
+      return `Departing in ${formatSeconds(deltaDeparture)} (est.)`;
     }
-    return `DEPARTING IN ${formatSeconds(deltaDeparture)}`;
+    return `Departing in ${formatSeconds(deltaDeparture)}`;
   }
 
-  if (deltaArrival < 60) {
-    return "LANDING NOW";
+  if (arrivalTime && deltaArrival < deltaDeparture) {
+    if (deltaArrival < 60) {
+      return "Landing now";
+    }
+    if (flight.arrivalTime?.actual) {
+      return `Landed ${formatSeconds(deltaArrival)} ago`;
+    }
+    if (flight.arrivalTime?.estimated) {
+      return `Landing in ${formatSeconds(deltaArrival)} (est.)`;
+    }
+    return `Landing in ${formatSeconds(deltaArrival)}`;
   }
-  if (flight.arrivalTime?.actual) {
-    return `LANDED ${formatSeconds(deltaArrival)} AGO`;
-  }
-  if (flight.arrivalTime?.estimated) {
-    return `LANDING IN ${formatSeconds(deltaArrival)} (est.)`;
-  }
-  return `LANDING IN ${formatSeconds(deltaArrival)}`;
+
+  return "";
 }
 
 function flightToTextCmds(flight: Flight, index = 1, total = 1) {
@@ -435,7 +439,9 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
   const altitude: TextCmd = {
     cmd: "text",
     text:
-      flight.altitude > 0 ? `${prettyNumber(flight.altitude)}ft` : "ON GROUND",
+      flight.altitude > 0
+        ? `${Math.round(flight.altitude / 100) * 100}ft`
+        : "ON GROUND",
     y: 29,
     x: 2,
     ...config.matrix.colors.green,
@@ -443,8 +449,8 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const speedAndHeading: TextCmd = {
     cmd: "text",
-    text: `${flight.groundSpeed > 0 ? `${flight.groundSpeed}kts ` : ""}${
-      flight.heading > 0 ? `${flight.heading}°` : ""
+    text: `${flight.groundSpeed > 0 ? `GS ${flight.groundSpeed}kts ` : ""}${
+      flight.heading > 0 ? `HDG ${flight.heading}°` : ""
     }`,
     y: 29,
     x: 2,

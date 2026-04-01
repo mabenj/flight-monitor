@@ -59,12 +59,3 @@ export function getNestedOrDefault<T, K extends string, D>(
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-export function formatAltitude(alt: number): string {
-  return alt >= 6000 ? `FL${Math.round(Math.round(alt / 100))}` : `${alt}ft`;
-}
-
-export function prettyNumber(num: number, roundTo = 100): string {
-  const rounded = Math.round(num / roundTo) * roundTo;
-  return new Intl.NumberFormat("en-US").format(rounded);
-}
