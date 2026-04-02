@@ -24,7 +24,7 @@ export class AppContext {
     public readonly matrix: MatrixClient
   ) {}
 
-  static create(db: DatabaseSync): AppContext {
+  static async create(db: DatabaseSync): Promise<AppContext> {
     const events = new EventTarget();
 
     return new AppContext(
@@ -36,7 +36,7 @@ export class AppContext {
       new Log("app"),
       events,
       new ElectricityPriceService(),
-      MatrixClient.getInstance()
+      await MatrixClient.getInstance()
     );
   }
 }

@@ -22,11 +22,11 @@ export class SettingsService {
     return value ? parseInt(value, 10) : 50;
   }
 
-  setBrightness(brightness: number): void {
+  async setBrightness(brightness: number): Promise<void> {
     this.set("brightness", brightness.toString());
-    const matrix = MatrixClient.getInstance();
+    const matrix = await MatrixClient.getInstance();
     if (matrix.isAvailable()) {
-      matrix.brightness(brightness);
+      await matrix.brightness(brightness);
     }
   }
 }

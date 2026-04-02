@@ -20,7 +20,7 @@ async function main() {
   const logger = new Log("main");
 
   const db = await Database.getDb();
-  const appContext = AppContext.create(db);
+  const appContext = await AppContext.create(db);
   const scheduler = new TaskScheduler(appContext);
   setupShutdown(db, scheduler, logger);
 
@@ -56,7 +56,7 @@ function setupShutdown(
       db.close();
     }
 
-    await MatrixClient.getInstance().close();
+    await (await MatrixClient.getInstance()).close();
     logger.info("Shutdown complete");
 
     Deno.exit(0);

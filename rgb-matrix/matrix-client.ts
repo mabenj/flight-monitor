@@ -19,15 +19,24 @@ export type ReadyMsg = { ready: true; font?: boolean };
 
 export class MatrixClient {
   private static instance: MatrixClient | null = null;
-  private readonly process: Deno.ChildProcess | null = null;
-  private readonly encoder = new TextEncoder();
-  private readonly writer: WritableStreamDefaultWriter<Uint8Array> | null =
-    null;
-  private readonly ready: Promise<ReadyMsg> | null = null;
-  private readonly log = new Log("MatrixClient");
-  private readonly available: boolean = false;
+  private static instancePromise: Promise<MatrixClient> | null = null;
 
-  private constructor() {
+  private process: Deno.ChildProcess | null = null;
+  private readonly encoder = new TextEncoder();
+  private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
+  private readonly log = new Log("MatrixClient");
+  private available: boolean = false;
+
+  private constructor() {}
+
+  private async initialize(): Promise<void> {
+    if (Deno.build.os !== "linux") {
+      this.log.warn(
+        `Matrix display not supported on ${Deno.build.os}, all operations will be no-ops`
+      );
+      return;
+    }
+
     try {
       const command = new Deno.Command("sudo", {
         args: ["-E", "python", "./rgb-matrix/matrixd.py"],
@@ -38,7 +47,15 @@ export class MatrixClient {
       this.process = command.spawn();
       this.writer = this.process.stdin.getWriter();
       const [stdoutForReady, stdoutForLog] = this.process.stdout.tee();
-      this.ready = readReadyLine(stdoutForReady);
+      await readReadyLine(stdoutForReady).catch((error) => {
+        this.available = false;
+        this.log.error(
+          `Python daemon failed to start: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        throw error;
+      });
       logStreamLines(
         this.process.stderr,
         this.log.error.bind(this.log),
@@ -56,11 +73,16 @@ export class MatrixClient {
     }
   }
 
-  static getInstance() {
-    if (!MatrixClient.instance) {
-      MatrixClient.instance = new MatrixClient();
+  static getInstance(): Promise<MatrixClient> {
+    if (!MatrixClient.instancePromise) {
+      MatrixClient.instancePromise = (async () => {
+        const instance = new MatrixClient();
+        await instance.initialize();
+        MatrixClient.instance = instance;
+        return instance;
+      })();
     }
-    return MatrixClient.instance;
+    return MatrixClient.instancePromise;
   }
 
   isAvailable(): boolean {
@@ -68,10 +90,9 @@ export class MatrixClient {
   }
 
   async send(cmd: MatrixCmd) {
-    if (!this.available || !this.ready || !this.writer) {
+    if (!this.available || !this.writer) {
       return MatrixClient.instance!;
     }
-    await this.ready;
     await this.writer.write(this.encoder.encode(JSON.stringify(cmd) + "\n"));
     return MatrixClient.instance!;
   }

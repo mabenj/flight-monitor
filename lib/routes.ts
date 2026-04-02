@@ -120,7 +120,7 @@ async function handleSetBrightness(
     );
   }
 
-  ctx.settingsService.setBrightness(brightness);
+  await ctx.settingsService.setBrightness(brightness);
   routerCtx.response.status = 200;
   routerCtx.response.body = { brightness };
 }
