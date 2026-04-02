@@ -316,6 +316,8 @@ function formatPrices(prices: ElectricityPrice[]): string {
 }
 
 function getFlightScheduleText(flight: Flight): string {
+  const NOW_THRESHOLD_SECONDS = 60;
+
   const departureTime =
     flight.departureTime?.actual ??
     flight.departureTime?.estimated ??
@@ -330,33 +332,37 @@ function getFlightScheduleText(flight: Flight): string {
   }
 
   const now = Date.now() / 1000;
-  const deltaDeparture = Math.abs(now - (departureTime ?? now));
-  const deltaArrival = Math.abs(now - (arrivalTime ?? now));
+  const timeToDeparture = (departureTime ?? Number.MAX_SAFE_INTEGER) - now;
+  const timeToArrival = (arrivalTime ?? Number.MAX_SAFE_INTEGER) - now;
 
-  if (departureTime && deltaDeparture < deltaArrival) {
-    if (deltaDeparture < 60) {
-      return "Departing now";
+  if (departureTime && Math.abs(timeToDeparture) < Math.abs(timeToArrival)) {
+    if (timeToDeparture >= 0) {
+      if (timeToDeparture < NOW_THRESHOLD_SECONDS) {
+        return "Departing now";
+      }
+      return `Departing in ${formatSeconds(timeToDeparture)}`;
+    } else {
+      const deltaDeparture = -timeToDeparture;
+      if (flight.departureTime?.actual) {
+        return `Departed ${formatSeconds(deltaDeparture)} ago`;
+      }
+      return `Departure late ${formatSeconds(deltaDeparture)}`;
     }
-    if (flight.departureTime?.actual) {
-      return `Departed ${formatSeconds(deltaDeparture)} ago`;
-    }
-    if (flight.departureTime?.estimated) {
-      return `Departing in ${formatSeconds(deltaDeparture)} (est.)`;
-    }
-    return `Departing in ${formatSeconds(deltaDeparture)}`;
   }
 
-  if (arrivalTime && deltaArrival < deltaDeparture) {
-    if (deltaArrival < 60) {
-      return "Landing now";
+  if (arrivalTime && Math.abs(timeToArrival) <= Math.abs(timeToDeparture)) {
+    if (timeToArrival >= 0) {
+      if (timeToArrival < NOW_THRESHOLD_SECONDS) {
+        return "Landing now";
+      }
+      return `Landing in ${formatSeconds(timeToArrival)}`;
+    } else {
+      const deltaArrival = -timeToArrival;
+      if (flight.arrivalTime?.actual) {
+        return `Landed ${formatSeconds(deltaArrival)} ago`;
+      }
+      return `Landing late ${formatSeconds(deltaArrival)}`;
     }
-    if (flight.arrivalTime?.actual) {
-      return `Landed ${formatSeconds(deltaArrival)} ago`;
-    }
-    if (flight.arrivalTime?.estimated) {
-      return `Landing in ${formatSeconds(deltaArrival)} (est.)`;
-    }
-    return `Landing in ${formatSeconds(deltaArrival)}`;
   }
 
   return "";
@@ -396,8 +402,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const flightNumber: TextCmd = {
     cmd: "text",
-    text:
-      flight.flightNumber ?? flight.aircraft?.registration ?? "Unknown flight",
+    text: flight.flightNumber ?? flight.aircraft?.registration ?? "",
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
@@ -415,10 +420,7 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const aircraftShort: TextCmd = {
     cmd: "text",
-    text:
-      flight.aircraft?.modelCode ??
-      flight.aircraft?.registration ??
-      "Unknown aircraft",
+    text: flight.aircraft?.modelCode ?? flight.aircraft?.registration ?? "",
     y: 22,
     x: 2,
     ...config.matrix.colors.cyan,
@@ -489,12 +491,12 @@ function formatSeconds(seconds: number): string {
   const minutes = totalMinutes % 60;
 
   if (hours === 0) {
-    return `${minutes} min`;
+    return `${minutes}m`;
   }
 
   if (minutes === 0) {
-    return `${hours} h`;
+    return `${hours}h`;
   }
 
-  return `${hours} h ${minutes} min`;
+  return `${hours}h ${minutes}m`;
 }
