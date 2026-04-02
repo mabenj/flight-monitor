@@ -1,27 +1,13 @@
 import { sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix-client.ts";
-import { FlightsService } from "../services/flights-service.ts";
-import { SettingsService } from "../services/settings-service.ts";
 import { config } from "../config.ts";
-import { WeatherService } from "../services/weather-service.ts";
-import { BoundsService } from "../services/bounds-service.ts";
 import { Weather } from "../types/weather.ts";
 import { ElectricityPrice } from "../types/electricity-price.ts";
-import { ElectricityPriceService } from "../services/electricity-price-service.ts";
-import { DatabaseSync } from "node:sqlite";
+import { AppContext } from "../lib/context.ts";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
-interface DisplayContext {
-  matrix: MatrixClient;
-  flightService: FlightsService;
-  settingsService: SettingsService;
-  weatherService: WeatherService;
-  boundsService: BoundsService;
-  priceService: ElectricityPriceService;
-}
 
-let ctx: DisplayContext | null = null;
 /**
  * How many times sendFlightsToMatrix has been called. Used to decide whether
  * to scroll the METAR or just show the static weather screen.
@@ -29,27 +15,21 @@ let ctx: DisplayContext | null = null;
 let callCount = 0;
 let lastInfo: "metar" | "prices" | null = null;
 
-function getContext(db: DatabaseSync): DisplayContext {
-  if (!ctx) {
-    ctx = {
-      matrix: MatrixClient.getInstance(),
-      flightService: new FlightsService(db),
-      settingsService: new SettingsService(db),
-      weatherService: new WeatherService(db),
-      boundsService: new BoundsService(db),
-      priceService: new ElectricityPriceService(),
-    };
-  }
-  return ctx;
-}
-
-export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
-  const { matrix, flightService, weatherService, boundsService, priceService } =
-    getContext(db);
+export async function updateMatrixDisplay(ctx: AppContext): Promise<void> {
+  const {
+    matrix,
+    flightsService,
+    weatherService,
+    boundsService,
+    priceService,
+    settingsService,
+  } = ctx;
 
   callCount++;
 
-  let flights = flightService.getActiveFlights();
+  await matrix.brightness(settingsService.getBrightness());
+
+  let flights = flightsService.getActiveFlights();
   if (flights.length === 0) {
     const bounds = boundsService.getActive();
     const weather = bounds?.airportCode
@@ -71,7 +51,7 @@ export async function updateMatrixDisplay(db: DatabaseSync): Promise<void> {
   }
 
   for (let i = 0; i < flights.length; i++) {
-    flights = flightService.getActiveFlights();
+    flights = flightsService.getActiveFlights();
     if (i >= flights.length) {
       break;
     }

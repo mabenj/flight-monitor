@@ -1,4 +1,3 @@
-import { DatabaseSync } from "node:sqlite";
 import { getNested, getNestedOrDefault, sleep } from "../lib/utils.ts";
 import { Bounds } from "../types/bounds.ts";
 import { Flight } from "../types/flight.ts";
@@ -6,11 +5,12 @@ import { BoundsService } from "../services/bounds-service.ts";
 import { FlightsService } from "../services/flights-service.ts";
 import Log from "../lib/log.ts";
 import { config } from "../config.ts";
+import { AppContext } from "../lib/context.ts";
 
-export async function scrapeActiveFlights(db: DatabaseSync) {
+export async function scrapeActiveFlights(ctx: AppContext) {
   const logger = new Log("scrape-flights");
-  const boundsService = new BoundsService(db);
-  const flightsService = new FlightsService(db);
+  const boundsService = new BoundsService(ctx.db, ctx.events);
+  const flightsService = new FlightsService(ctx.db);
   const bounds = boundsService.getActive();
   if (!bounds) {
     logger.info("No active bounds found");

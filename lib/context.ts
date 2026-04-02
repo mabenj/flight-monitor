@@ -8,6 +8,8 @@ import { FlightsService } from "../services/flights-service.ts";
 import { SettingsService } from "../services/settings-service.ts";
 import Log from "./log.ts";
 import { WeatherService } from "../services/weather-service.ts";
+import { MatrixClient } from "../rgb-matrix/matrix-client.ts";
+import { ElectricityPriceService } from "../services/electricity-price-service.ts";
 
 export class AppContext {
   private constructor(
@@ -16,19 +18,25 @@ export class AppContext {
     public readonly flightsService: FlightsService,
     public readonly settingsService: SettingsService,
     public readonly weatherService: WeatherService,
-    public readonly logger: Log
+    public readonly logger: Log,
+    public readonly events: EventTarget,
+    public readonly priceService: ElectricityPriceService,
+    public readonly matrix: MatrixClient
   ) {}
 
   static create(db: DatabaseSync): AppContext {
-    const logger = new Log("app");
+    const events = new EventTarget();
 
     return new AppContext(
       db,
-      new BoundsService(db),
+      new BoundsService(db, events),
       new FlightsService(db),
       new SettingsService(db),
       new WeatherService(db),
-      logger
+      new Log("app"),
+      events,
+      new ElectricityPriceService(),
+      MatrixClient.getInstance()
     );
   }
 }

@@ -14,8 +14,21 @@ export class TaskScheduler {
   private matrixTimeoutId: number | null = null;
   private running = false;
   private logger = new Log("scheduler");
+  private settingsChangeListener: (event: Event) => void;
 
-  constructor(private ctx: AppContext) {}
+  constructor(private ctx: AppContext) {
+    this.settingsChangeListener = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail?.type === "bounds") {
+        this.logger.info("Bounds changed, restarting scheduler");
+        this.restart();
+      }
+    };
+  }
+
+  restart(): void {
+    this.stop();
+    this.start();
+  }
 
   start(): void {
     if (this.running) {
@@ -25,6 +38,11 @@ export class TaskScheduler {
 
     this.running = true;
     this.logger.info("Starting task scheduler");
+
+    this.ctx.events.addEventListener(
+      "settingsChanged",
+      this.settingsChangeListener
+    );
 
     this.startScrapeTask();
     this.startMatrixTask();
@@ -47,6 +65,11 @@ export class TaskScheduler {
       clearTimeout(this.matrixTimeoutId);
       this.matrixTimeoutId = null;
     }
+
+    this.ctx.events.removeEventListener(
+      "settingsChanged",
+      this.settingsChangeListener
+    );
   }
 
   private startScrapeTask(): void {
@@ -55,8 +78,8 @@ export class TaskScheduler {
     };
     const runScrapeTask = async () => {
       try {
-        await scrapeActiveFlights(this.ctx.db);
-        await scrapeWeather(this.ctx.db);
+        await scrapeActiveFlights(this.ctx);
+        await scrapeWeather(this.ctx);
       } catch (error) {
         this.logger.error("Scrape task failed", error);
       }
@@ -78,7 +101,7 @@ export class TaskScheduler {
   private startMatrixTask(): void {
     const runMatrixTask = async () => {
       try {
-        await updateMatrixDisplay(this.ctx.db);
+        await updateMatrixDisplay(this.ctx);
       } catch (error) {
         this.logger.error("Matrix task failed", error);
       }

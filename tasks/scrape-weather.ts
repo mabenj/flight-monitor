@@ -1,14 +1,14 @@
-import { DatabaseSync } from "node:sqlite";
 import Log from "../lib/log.ts";
 import { BoundsService } from "../services/bounds-service.ts";
 import { WeatherService } from "../services/weather-service.ts";
 import { Weather } from "../types/weather.ts";
 import { config } from "../config.ts";
+import { AppContext } from "../lib/context.ts";
 
-export async function scrapeWeather(db: DatabaseSync) {
+export async function scrapeWeather(ctx: AppContext) {
   const logger = new Log("scrape-weather");
-  const boundsService = new BoundsService(db);
-  const weatherService = new WeatherService(db);
+  const boundsService = new BoundsService(ctx.db, ctx.events);
+  const weatherService = new WeatherService(ctx.db);
   const bounds = boundsService.getActive();
   if (!bounds?.airportCode) {
     logger.warn("No active bounds with airport code found");

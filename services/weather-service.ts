@@ -1,7 +1,6 @@
 import { DatabaseSync, SQLOutputValue } from "node:sqlite";
-import { Weather } from "../types/weather.ts";
 import { CreateResult } from "../types/create-result.ts";
-import { NotFoundError } from "../lib/errors.ts";
+import { Weather } from "../types/weather.ts";
 
 export class WeatherService {
   constructor(private readonly db: DatabaseSync) {}
@@ -11,11 +10,11 @@ export class WeatherService {
       .prepare("SELECT * FROM airport WHERE icao = ?")
       .get(airportIcao.toUpperCase());
     if (!row) {
-      throw new NotFoundError(`Airport ${airportIcao} not found`);
+      return null;
     }
     const weather = this.mapToWeather(row);
     if (!weather.timestamp) {
-      throw new NotFoundError(`Weather for airport ${airportIcao} not found`);
+      return null;
     }
     return weather;
   }

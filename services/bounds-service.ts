@@ -3,7 +3,10 @@ import { Bounds } from "../types/bounds.ts";
 import { CreateResult } from "../types/create-result.ts";
 
 export class BoundsService {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(
+    private readonly db: DatabaseSync,
+    private readonly events: EventTarget
+  ) {}
 
   delete(id: number): { reason: string } | null {
     const result = this.db.prepare("DELETE FROM bounds WHERE id = ?").run(id);
@@ -41,6 +44,7 @@ export class BoundsService {
     if (badRequest) {
       return [badRequest, null];
     }
+
     try {
       this.db.exec("BEGIN TRANSACTION;");
       const id = this.db
@@ -61,6 +65,15 @@ export class BoundsService {
         this.db.prepare("DELETE FROM activeFlight;").run();
       }
       this.db.exec("COMMIT;");
+
+      if (bounds.isActive) {
+        this.events.dispatchEvent(
+          new CustomEvent("settingsChanged", {
+            detail: { type: "bounds", action: "activated" },
+          })
+        );
+      }
+
       return [null, this.get(Number(id))!];
     } catch (error) {
       this.db.exec("ROLLBACK;");
@@ -73,6 +86,7 @@ export class BoundsService {
     if (badRequest) {
       return [badRequest, null];
     }
+
     try {
       this.db.exec("BEGIN TRANSACTION;");
       this.db
@@ -94,6 +108,15 @@ export class BoundsService {
         this.db.prepare("DELETE FROM activeFlight;").run();
       }
       this.db.exec("COMMIT;");
+
+      if (bounds.isActive) {
+        this.events.dispatchEvent(
+          new CustomEvent("settingsChanged", {
+            detail: { type: "bounds", action: "activated" },
+          })
+        );
+      }
+
       return [null, this.get(id)!];
     } catch (error) {
       this.db.exec("ROLLBACK;");
