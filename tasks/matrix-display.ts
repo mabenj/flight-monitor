@@ -15,7 +15,10 @@ type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 let callCount = 0;
 let lastInfo: "metar" | "prices" | null = null;
 
-export async function updateMatrixDisplay(ctx: AppContext): Promise<void> {
+export async function updateMatrixDisplay(
+  ctx: AppContext,
+  signal?: AbortSignal
+): Promise<void> {
   const {
     matrix,
     flightsService,
@@ -42,7 +45,8 @@ export async function updateMatrixDisplay(ctx: AppContext): Promise<void> {
       weather,
       prices,
       shouldScroll && lastInfo === "prices",
-      shouldScroll && lastInfo === "metar"
+      shouldScroll && lastInfo === "metar",
+      signal
     );
     if (shouldScroll) {
       lastInfo = lastInfo === "metar" ? "prices" : "metar";
@@ -51,11 +55,16 @@ export async function updateMatrixDisplay(ctx: AppContext): Promise<void> {
   }
 
   for (let i = 0; i < flights.length; i++) {
+    // Check if cancellation was requested
+    if (signal?.aborted) {
+      break;
+    }
+
     flights = flightsService.getActiveFlights();
     if (i >= flights.length) {
       break;
     }
-    await showFlight(matrix, flights[i], i + 1, flights.length);
+    await showFlight(matrix, flights[i], i + 1, flights.length, signal);
   }
 }
 
@@ -64,7 +73,8 @@ async function showInfoScreen(
   weather: Weather | null,
   electricityPrices: ElectricityPrice[],
   scrollMetar: boolean,
-  scrollPrices: boolean
+  scrollPrices: boolean,
+  signal?: AbortSignal
 ): Promise<void> {
   const now = new Date();
 
@@ -109,7 +119,8 @@ async function showInfoScreen(
       matrix,
       metarCmd,
       staticCmds,
-      config.matrix.timing.metarScrollFrameMs
+      config.matrix.timing.metarScrollFrameMs,
+      signal
     );
   } else if (scrollPrices && electricityPrices.length > 0) {
     const priceCmd: TextCmd = {
@@ -123,10 +134,11 @@ async function showInfoScreen(
       matrix,
       priceCmd,
       staticCmds,
-      config.matrix.timing.priceScrollFrameMs
+      config.matrix.timing.priceScrollFrameMs,
+      signal
     );
   } else {
-    await hold(matrix, staticCmds, config.matrix.timing.holdMs);
+    await hold(matrix, staticCmds, config.matrix.timing.holdMs, signal);
   }
 }
 
@@ -134,7 +146,8 @@ async function showFlight(
   matrix: MatrixClient,
   flight: Flight,
   index: number,
-  total: number
+  total: number,
+  signal?: AbortSignal
 ): Promise<void> {
   const cmds = flightToTextCmds(flight, index, total);
   const aircraftForStatic = chooseAircraftLine(cmds);
@@ -147,15 +160,16 @@ async function showFlight(
     cmds.altitude,
   ];
 
-  await hold(matrix, staticFrame, config.matrix.timing.holdMs);
-  await sleep(config.matrix.timing.betweenScrollsMs);
+  await hold(matrix, staticFrame, config.matrix.timing.holdMs, signal);
+  await sleep(config.matrix.timing.betweenScrollsMs, signal);
 
   if (flight.origin?.name || flight.destination?.name) {
     await scrollLeft(
       matrix,
       cmds.routeLong,
       [cmds.flightNumber, aircraftForStatic, cmds.altitude],
-      config.matrix.timing.routeScrollFrameMs
+      config.matrix.timing.routeScrollFrameMs,
+      signal
     );
   }
 
@@ -164,7 +178,8 @@ async function showFlight(
       matrix,
       cmds.airlineAndCallsign,
       [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
-      config.matrix.timing.airlineScrollFrameMs
+      config.matrix.timing.airlineScrollFrameMs,
+      signal
     );
   }
 
@@ -173,7 +188,8 @@ async function showFlight(
       matrix,
       cmds.aircraftLong,
       [cmds.flightCount, cmds.routeShort, cmds.flightNumber, cmds.altitude],
-      config.matrix.timing.aircraftScrollFrameMs
+      config.matrix.timing.aircraftScrollFrameMs,
+      signal
     );
   }
 
@@ -182,7 +198,8 @@ async function showFlight(
       matrix,
       cmds.speedAndHeading,
       [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
-      config.matrix.timing.speedAndHeadingScrollFrameMs
+      config.matrix.timing.speedAndHeadingScrollFrameMs,
+      signal
     );
   }
 
@@ -191,12 +208,13 @@ async function showFlight(
       matrix,
       cmds.schedule,
       [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
-      config.matrix.timing.scheduleScrollFrameMs
+      config.matrix.timing.scheduleScrollFrameMs,
+      signal
     );
   }
 
-  await hold(matrix, staticFrame, config.matrix.timing.holdMs);
-  await sleep(config.matrix.timing.betweenScrollsMs);
+  await hold(matrix, staticFrame, config.matrix.timing.holdMs, signal);
+  await sleep(config.matrix.timing.betweenScrollsMs, signal);
 }
 
 async function renderFrame(
@@ -211,24 +229,29 @@ async function renderFrame(
 async function hold(
   matrix: MatrixClient,
   cmds: TextCmd[],
-  ms: number
+  ms: number,
+  signal?: AbortSignal
 ): Promise<void> {
   await renderFrame(matrix, cmds);
-  await sleep(ms);
+  await sleep(ms, signal);
 }
 
 async function scrollLeft(
   matrix: MatrixClient,
   scrollingCmd: TextCmd,
   fixedCmds: TextCmd[],
-  frameDelayMs: number
+  frameDelayMs: number,
+  signal?: AbortSignal
 ): Promise<void> {
   let x = startOffscreenRight(scrollingCmd);
   const w = textWidthPx(scrollingCmd.text);
 
   while (x + w >= 0) {
+    if (signal?.aborted) {
+      break;
+    }
     await renderFrame(matrix, [...fixedCmds, { ...scrollingCmd, x }]);
-    await sleep(frameDelayMs);
+    await sleep(frameDelayMs, signal);
     x -= 1;
   }
 }

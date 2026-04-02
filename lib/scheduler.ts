@@ -15,6 +15,7 @@ export class TaskScheduler {
   private running = false;
   private logger = new Log("scheduler");
   private settingsChangeListener: (event: Event) => void;
+  private abortController: AbortController | null = null;
 
   constructor(private ctx: AppContext) {
     this.settingsChangeListener = (event: Event) => {
@@ -37,6 +38,7 @@ export class TaskScheduler {
     }
 
     this.running = true;
+    this.abortController = new AbortController();
     this.logger.info("Starting task scheduler");
 
     this.ctx.events.addEventListener(
@@ -55,6 +57,12 @@ export class TaskScheduler {
 
     this.running = false;
     this.logger.info("Stopping task scheduler");
+
+    // Abort all running tasks immediately
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
 
     if (this.scrapeIntervalId !== null) {
       clearInterval(this.scrapeIntervalId);
@@ -78,10 +86,15 @@ export class TaskScheduler {
     };
     const runScrapeTask = async () => {
       try {
-        await scrapeActiveFlights(this.ctx);
-        await scrapeWeather(this.ctx);
+        await scrapeActiveFlights(this.ctx, this.abortController?.signal);
+        await scrapeWeather(this.ctx, this.abortController?.signal);
       } catch (error) {
-        this.logger.error("Scrape task failed", error);
+        // Silence AbortError, log other errors
+        if (error instanceof DOMException && error.name === "AbortError") {
+          this.logger.debug("Scrape task was cancelled");
+        } else {
+          this.logger.error("Scrape task failed", error);
+        }
       }
 
       if (!this.running && this.scrapeIntervalId !== null) {
@@ -101,9 +114,14 @@ export class TaskScheduler {
   private startMatrixTask(): void {
     const runMatrixTask = async () => {
       try {
-        await updateMatrixDisplay(this.ctx);
+        await updateMatrixDisplay(this.ctx, this.abortController?.signal);
       } catch (error) {
-        this.logger.error("Matrix task failed", error);
+        // Silence AbortError, log other errors
+        if (error instanceof DOMException && error.name === "AbortError") {
+          this.logger.debug("Matrix task was cancelled");
+        } else {
+          this.logger.error("Matrix task failed", error);
+        }
       }
 
       if (!this.running && this.matrixTimeoutId !== null) {

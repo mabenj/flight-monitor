@@ -7,7 +7,10 @@ import Log from "../lib/log.ts";
 import { config } from "../config.ts";
 import { AppContext } from "../lib/context.ts";
 
-export async function scrapeActiveFlights(ctx: AppContext) {
+export async function scrapeActiveFlights(
+  ctx: AppContext,
+  signal?: AbortSignal
+) {
   const logger = new Log("scrape-flights");
   const boundsService = new BoundsService(ctx.db, ctx.events);
   const flightsService = new FlightsService(ctx.db);
@@ -16,7 +19,7 @@ export async function scrapeActiveFlights(ctx: AppContext) {
     logger.info("No active bounds found");
     return;
   }
-  const flights = await getFlights(bounds, logger);
+  const flights = await getFlights(bounds, signal, logger);
   const activeBoundsId = boundsService.getActive()?.id;
   if (activeBoundsId !== bounds.id) {
     logger.info(
@@ -27,7 +30,11 @@ export async function scrapeActiveFlights(ctx: AppContext) {
   flightsService.setActiveFlights(flights);
 }
 
-async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
+async function getFlights(
+  bounds: Bounds,
+  signal: AbortSignal | undefined,
+  logger: Log
+): Promise<Flight[]> {
   const url = new URL(config.flightradar24.realtimeUrl);
   url.searchParams.append("bounds", boundsToString(bounds));
   Object.entries(config.flightradar24.queryParams).forEach(([key, value]) => {
@@ -36,6 +43,7 @@ async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
   logger.debug(`Fetching flights from bounds '${bounds.label}'`);
   const response = await fetch(url.toString(), {
     headers: config.flightradar24.headers,
+    signal,
   });
   if (!response.headers.get("content-type")?.includes("application/json")) {
     logger.error(
@@ -54,10 +62,17 @@ async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
   logger.debug(`Found ${keys.length} flights in the response`);
   const flights: Flight[] = [];
   for (const key of keys) {
+    // Check if cancellation was requested
+    if (signal?.aborted) {
+      logger.debug("Flight scraping cancelled");
+      break;
+    }
+
     const detailsResponse = await fetch(
       `${config.flightradar24.detailsUrl}${key}`,
       {
         headers: config.flightradar24.headers,
+        signal,
       }
     );
     if (
@@ -78,7 +93,7 @@ async function getFlights(bounds: Bounds, logger: Log): Promise<Flight[]> {
       continue;
     }
     flights.push(parseFlight(key, flight));
-    await sleep(config.flightradar24.delayBetweenRequestsMs);
+    await sleep(config.flightradar24.delayBetweenRequestsMs, signal);
   }
 
   return flights;

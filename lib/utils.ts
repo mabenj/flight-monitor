@@ -56,6 +56,25 @@ export function getNestedOrDefault<T, K extends string, D>(
   return current ?? defaultValue;
 }
 
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+
+    const timeoutId = setTimeout(resolve, ms);
+    const abortHandler = () => {
+      clearTimeout(timeoutId);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+
+    signal?.addEventListener("abort", abortHandler, { once: true });
+  });
 }
+
+/**
+ * Delay execution for a given number of milliseconds with AbortSignal support.
+ * Throws AbortError if signal is aborted during the delay.
+ */
+export const delay = sleep;

@@ -5,7 +5,7 @@ import { Weather } from "../types/weather.ts";
 import { config } from "../config.ts";
 import { AppContext } from "../lib/context.ts";
 
-export async function scrapeWeather(ctx: AppContext) {
+export async function scrapeWeather(ctx: AppContext, signal?: AbortSignal) {
   const logger = new Log("scrape-weather");
   const boundsService = new BoundsService(ctx.db, ctx.events);
   const weatherService = new WeatherService(ctx.db);
@@ -15,7 +15,7 @@ export async function scrapeWeather(ctx: AppContext) {
     return;
   }
   logger.debug(`Scraping weather for airport ${bounds.airportCode}`);
-  const weather = await getWeather(bounds.airportCode);
+  const weather = await getWeather(bounds.airportCode, signal);
   if (!weather) {
     logger.warn(`No weather found for airport ${bounds.airportCode}`);
     return;
@@ -23,9 +23,13 @@ export async function scrapeWeather(ctx: AppContext) {
   weatherService.setWeather(weather);
 }
 
-async function getWeather(icao: string): Promise<Weather | null> {
+async function getWeather(
+  icao: string,
+  signal?: AbortSignal
+): Promise<Weather | null> {
   const response = await fetch(
-    `${config.flightradar24.airportUrl}?code=${icao}`
+    `${config.flightradar24.airportUrl}?code=${icao}`,
+    { signal }
   );
   const json = await response.json();
   const error = json["errors"]?.["message"];
