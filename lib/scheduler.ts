@@ -127,7 +127,7 @@ export class TaskScheduler {
       if (!this.running && this.matrixTimeoutId !== null) {
         clearTimeout(this.matrixTimeoutId);
         this.matrixTimeoutId = null;
-      } else if (this.running) {
+      } else if (this.running && !this.abortController?.signal.aborted) {
         this.matrixTimeoutId = setTimeout(runMatrixTask, 0);
       }
     };
