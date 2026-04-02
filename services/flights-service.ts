@@ -185,14 +185,17 @@ export class FlightsService {
       if (existingAircraft) {
         this.db
           .prepare(
-            "UPDATE aircraft SET modelCode = ?, modelText = ? WHERE id = ?"
+            "UPDATE aircraft SET modelCode = ?, modelText = ?, registration = ? WHERE id = ?"
           )
           .run(
-            existingAircraft.modelCode ||
-              aircraft.modelCode?.toString() ||
+            aircraft.modelCode?.toString() ||
+              existingAircraft.modelCode ||
               null,
-            existingAircraft.modelText ||
-              aircraft.modelText?.toString() ||
+            aircraft.modelText?.toString() ||
+              existingAircraft.modelText ||
+              null,
+            existingAircraft.registration ||
+              aircraft.registration?.toString() ||
               null,
             existingAircraft.id
           );
@@ -234,10 +237,17 @@ export class FlightsService {
         actualArrival: numberOrNull(flight.arrivalTime?.actual),
         timestamp: unixTimestamp,
         boundsId: numberOrNull(activeBoundsId),
-        aircraftId: toStringOrNull(flight.aircraft?.registration)
+        aircraftId: toStringOrNull(
+          flight.aircraft?.registration ?? flight.aircraft?.modelCode
+        )
           ? this.db
-              .prepare("SELECT id FROM aircraft WHERE registration = ? LIMIT 1")
-              .get(flight.aircraft.registration ?? null)?.id ?? null
+              .prepare(
+                "SELECT id FROM aircraft WHERE (registration IS NOT NULL AND registration = ?) OR (registration IS NULL AND modelCode = ?) LIMIT 1"
+              )
+              .get(
+                flight.aircraft.registration ?? null,
+                flight.aircraft.modelCode ?? null
+              )?.id ?? null
           : null,
         airlineId: flight.airline
           ? this.db
