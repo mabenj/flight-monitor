@@ -481,7 +481,7 @@ function formatSeconds(seconds: number): string {
 }
 
 function getFlightRouteShort(flight: Flight): string {
-  if (flight.origin && flight.destination) {
+  if (flight.origin.iata && flight.destination.iata) {
     return `${flight.origin.iata}-${flight.destination.iata}`;
   }
   if (flight.origin) {
