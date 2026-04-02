@@ -3,7 +3,10 @@
  */
 
 import { scrapeActiveFlights } from "../tasks/scrape-active-flights.ts";
-import { updateMatrixDisplay } from "../tasks/matrix-display.ts";
+import {
+  displayStartingUp,
+  updateMatrixDisplay,
+} from "../tasks/matrix-display.ts";
 import { AppContext } from "./context.ts";
 import Log from "./log.ts";
 import { config } from "../config.ts";
@@ -137,7 +140,9 @@ export class TaskScheduler {
       }
     };
 
-    runMatrixTask();
+    displayStartingUp(this.ctx, this.abortController?.signal).then(() =>
+      runMatrixTask()
+    );
   }
 
   isRunning(): boolean {

@@ -9,11 +9,74 @@ import { AppContext } from "../lib/context.ts";
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
 /**
- * How many times sendFlightsToMatrix has been called. Used to decide whether
+ * How many times updateMatrixDisplay has been called. Used to decide whether
  * to scroll the METAR or just show the static weather screen.
  */
 let callCount = 0;
 let lastInfo: "metar" | "prices" | null = null;
+
+export async function displayStartingUp(
+  ctx: AppContext,
+  signal?: AbortSignal
+): Promise<void> {
+  const { matrix, boundsService, settingsService } = ctx;
+
+  await matrix.brightness(settingsService.getBrightness());
+  const bounds = boundsService.getActive();
+
+  const startingUpText = "Starting...";
+  const startingUpX = Math.floor(
+    (config.matrix.displayWidthPx -
+      startingUpText.length * config.matrix.displayFontWidthPx) /
+      2
+  );
+  const startingUp: TextCmd = {
+    cmd: "text",
+    text: startingUpText,
+    y: Math.floor(
+      (config.matrix.displayHeightPx - config.matrix.displayFontHeightPx) / 2 +
+        config.matrix.displayFontHeightPx
+    ),
+    x: startingUpX,
+    ...config.matrix.colors.green,
+  };
+  for (let i = 0; i < 3; i++) {
+    if (signal?.aborted) {
+      break;
+    }
+    await matrix.clear();
+    startingUp.text = "Starting";
+    await hold(matrix, [startingUp], 200, signal);
+    startingUp.text = "Starting.";
+    await hold(matrix, [startingUp], 200, signal);
+    startingUp.text = "Starting..";
+    await hold(matrix, [startingUp], 200, signal);
+    startingUp.text = "Starting...";
+    await hold(matrix, [startingUp], 200, signal);
+  }
+
+  const boundsLabel: TextCmd = {
+    cmd: "text",
+    text: bounds
+      ? `[Active bounds: ${bounds.label}] ${
+          bounds.airportCode ? `[Ref. airport: ${bounds.airportCode}]` : ""
+        }`.trim()
+      : "No active bounds set",
+    y: Math.floor(
+      (config.matrix.displayHeightPx - config.matrix.displayFontHeightPx) / 2 +
+        config.matrix.displayFontHeightPx
+    ),
+    x: 2,
+    ...config.matrix.colors.green,
+  };
+  await scrollLeft(
+    matrix,
+    boundsLabel,
+    [],
+    config.matrix.timing.startingUpFrameMs,
+    signal
+  );
+}
 
 export async function updateMatrixDisplay(
   ctx: AppContext,

@@ -56,7 +56,9 @@ export const config = {
 
   matrix: {
     displayWidthPx: 64,
+    displayHeightPx: 32,
     displayFontWidthPx: 5,
+    displayFontHeightPx: 7,
     timing: {
       holdMs: 2_000,
       betweenScrollsMs: 1_000,
@@ -67,6 +69,7 @@ export const config = {
       priceScrollFrameMs: 50,
       scheduleScrollFrameMs: 20,
       speedAndHeadingScrollFrameMs: 20,
+      startingUpFrameMs: 10,
     },
     colors: {
       white: { r: 255, g: 255, b: 255 },
