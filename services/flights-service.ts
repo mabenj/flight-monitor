@@ -204,7 +204,7 @@ export class FlightsService {
           .run(
             aircraft.modelCode?.toString() ?? null,
             aircraft.modelText?.toString() ?? null,
-            aircraft.registration.toString()
+            aircraft.registration?.toString() ?? null
           );
       }
     }
