@@ -1,14 +1,15 @@
 /**
  * API route definitions
  */
+// deno-lint-ignore-file require-await
 
 import { Router, RouterContext } from "@oak/oak";
 import { AppContext } from "./context.ts";
 import { config } from "../config.ts";
-import { ApiError, ValidationApiError, NotFoundError } from "./errors.ts";
+import { ValidationApiError, NotFoundError } from "./errors.ts";
 import { Bounds } from "../types/bounds.ts";
 
-export function setupRoutes(router: Router, ctx: AppContext): void {
+export function setupRoutes(router: Router, _: AppContext): void {
   // Bounds API
   router.get("/api/bounds", handleGetBounds);
   router.get("/api/bounds/:id", handleGetBoundById);

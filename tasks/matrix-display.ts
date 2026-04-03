@@ -8,17 +8,7 @@ import { AppContext } from "../lib/context.ts";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
-/**
- * How many times updateMatrixDisplay has been called. Used to decide whether
- * to scroll the METAR or just show the static weather screen.
- */
-let callCount = 0;
-let lastInfo: "metar" | "prices" | null = null;
-
-export async function displayStartingUp(
-  ctx: AppContext,
-  signal?: AbortSignal
-): Promise<void> {
+export async function displayStartingUp(ctx: AppContext): Promise<void> {
   const { matrix, boundsService, settingsService } = ctx;
 
   await matrix.brightness(settingsService.getBrightness());
@@ -40,26 +30,20 @@ export async function displayStartingUp(
     x: startingUpX,
     ...config.matrix.colors.green,
   };
+  await matrix.clear();
   for (let i = 0; i < 3; i++) {
-    if (signal?.aborted) {
-      break;
+    for (const text of ["Starting", "Starting.", "Starting..", "Starting..."]) {
+      startingUp.text = text;
+      await renderFrame(matrix, [startingUp]);
+      await sleep(200);
     }
-    await matrix.clear();
-    startingUp.text = "Starting";
-    await hold(matrix, [startingUp], 200, signal);
-    startingUp.text = "Starting.";
-    await hold(matrix, [startingUp], 200, signal);
-    startingUp.text = "Starting..";
-    await hold(matrix, [startingUp], 200, signal);
-    startingUp.text = "Starting...";
-    await hold(matrix, [startingUp], 200, signal);
   }
 
   const boundsLabel: TextCmd = {
     cmd: "text",
     text: bounds
-      ? `[Active bounds: ${bounds.label}] ${
-          bounds.airportCode ? `[Ref. airport: ${bounds.airportCode}]` : ""
+      ? `${bounds.label} ${
+          bounds.airportCode ? `[${bounds.airportCode}]` : ""
         }`.trim()
       : "No active bounds set",
     y: Math.floor(
@@ -73,14 +57,13 @@ export async function displayStartingUp(
     matrix,
     boundsLabel,
     [],
-    config.matrix.timing.startingUpFrameMs,
-    signal
+    config.matrix.timing.startingUpFrameMs
   );
 }
 
 export async function updateMatrixDisplay(
   ctx: AppContext,
-  signal?: AbortSignal
+  signal: AbortSignal
 ): Promise<void> {
   const {
     matrix,
@@ -91,8 +74,6 @@ export async function updateMatrixDisplay(
     settingsService,
   } = ctx;
 
-  callCount++;
-
   await matrix.brightness(settingsService.getBrightness());
 
   let flights = flightsService.getActiveFlights();
@@ -102,32 +83,21 @@ export async function updateMatrixDisplay(
       ? weatherService.getWeather(bounds.airportCode)
       : null;
     const prices = await priceService.getCurrentAndUpcomingPrices();
-    const shouldScroll = callCount % config.matrix.infoScrollEveryNFrames === 0;
     await showInfoScreen(
       matrix,
       weather,
       prices,
-      shouldScroll && lastInfo === "prices",
-      shouldScroll && lastInfo === "metar",
+      () => flightsService.getActiveFlights().length > 0,
       signal
     );
-    if (shouldScroll) {
-      lastInfo = lastInfo === "metar" ? "prices" : "metar";
+  } else {
+    for (let i = 0; i < flights.length; i++) {
+      flights = flightsService.getActiveFlights();
+      if (i >= flights.length || signal.aborted) {
+        break;
+      }
+      await showFlight(matrix, flights[i], i + 1, flights.length, signal);
     }
-    return;
-  }
-
-  for (let i = 0; i < flights.length; i++) {
-    // Check if cancellation was requested
-    if (signal?.aborted) {
-      break;
-    }
-
-    flights = flightsService.getActiveFlights();
-    if (i >= flights.length) {
-      break;
-    }
-    await showFlight(matrix, flights[i], i + 1, flights.length, signal);
   }
 }
 
@@ -135,16 +105,16 @@ async function showInfoScreen(
   matrix: MatrixClient,
   weather: Weather | null,
   electricityPrices: ElectricityPrice[],
-  scrollMetar: boolean,
-  scrollPrices: boolean,
-  signal?: AbortSignal
+  checkHasNewFlights: () => boolean,
+  signal: AbortSignal
 ): Promise<void> {
-  const now = new Date();
+  const combinedSignal = AbortSignal.any([signal, getNewFlightsAbortSignal()]);
 
+  const now = new Date();
   const timeString = formatTime(now);
   const dateString = formatDate(now);
   const pricesString = formatPrices(electricityPrices);
-  const tempC = `${weather?.tempCelsius ?? "--"}°C`;
+  const tempC = weather?.tempCelsius ? `${weather?.tempCelsius}°C` : "";
 
   const timeCmd: TextCmd = {
     cmd: "text",
@@ -170,7 +140,7 @@ async function showInfoScreen(
 
   const staticCmds = [timeCmd, tempCmd, dateCmd];
 
-  if (scrollMetar && weather?.metar) {
+  if (weather?.metar) {
     const metarCmd: TextCmd = {
       cmd: "text",
       text: weather.metar,
@@ -178,14 +148,18 @@ async function showInfoScreen(
       x: 2,
       ...config.matrix.colors.grey,
     };
+    await renderFrame(matrix, staticCmds);
+    await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
     await scrollLeft(
       matrix,
       metarCmd,
       staticCmds,
       config.matrix.timing.metarScrollFrameMs,
-      signal
+      combinedSignal
     );
-  } else if (scrollPrices && electricityPrices.length > 0) {
+  }
+
+  if (electricityPrices.length > 0) {
     const priceCmd: TextCmd = {
       cmd: "text",
       text: pricesString,
@@ -193,15 +167,41 @@ async function showInfoScreen(
       x: 2,
       ...config.matrix.colors.grey,
     };
+    await renderFrame(matrix, staticCmds);
+    await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
     await scrollLeft(
       matrix,
       priceCmd,
       staticCmds,
       config.matrix.timing.priceScrollFrameMs,
-      signal
+      combinedSignal
     );
-  } else {
-    await hold(matrix, staticCmds, config.matrix.timing.holdMs, signal);
+
+    if (!weather?.metar && electricityPrices.length === 0) {
+      await renderFrame(matrix, staticCmds);
+      await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
+    }
+  }
+
+  function getNewFlightsAbortSignal(): AbortSignal {
+    const newFlightsAbortController = new AbortController();
+    const timeout = AbortSignal.timeout(20_000); // Fallback in case something goes wrong with the flight checking
+    const combinedSignal = AbortSignal.any([
+      newFlightsAbortController.signal,
+      timeout,
+    ]);
+
+    const checkInterval = setInterval(() => {
+      if (checkHasNewFlights()) {
+        newFlightsAbortController.abort();
+      }
+    }, 1000);
+
+    combinedSignal.addEventListener("abort", () => {
+      clearInterval(checkInterval);
+    });
+
+    return newFlightsAbortController.signal;
   }
 }
 
@@ -210,7 +210,7 @@ async function showFlight(
   flight: Flight,
   index: number,
   total: number,
-  signal?: AbortSignal
+  signal: AbortSignal
 ): Promise<void> {
   const cmds = flightToTextCmds(flight, index, total);
   const aircraftForStatic = chooseAircraftLine(cmds);
@@ -223,7 +223,7 @@ async function showFlight(
     cmds.altitude,
   ];
 
-  await hold(matrix, staticFrame, config.matrix.timing.holdMs, signal);
+  await renderFrame(matrix, staticFrame);
   await sleep(config.matrix.timing.betweenScrollsMs, signal);
 
   if (flight.origin?.name || flight.destination?.name) {
@@ -276,7 +276,7 @@ async function showFlight(
     );
   }
 
-  await hold(matrix, staticFrame, config.matrix.timing.holdMs, signal);
+  await renderFrame(matrix, staticFrame);
   await sleep(config.matrix.timing.betweenScrollsMs, signal);
 }
 
@@ -287,16 +287,6 @@ async function renderFrame(
   await matrix.clear();
   for (const cmd of cmds) await matrix.send(cmd);
   await matrix.flush();
-}
-
-async function hold(
-  matrix: MatrixClient,
-  cmds: TextCmd[],
-  ms: number,
-  signal?: AbortSignal
-): Promise<void> {
-  await renderFrame(matrix, cmds);
-  await sleep(ms, signal);
 }
 
 async function scrollLeft(

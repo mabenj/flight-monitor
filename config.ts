@@ -60,8 +60,8 @@ export const config = {
     displayFontWidthPx: 5,
     displayFontHeightPx: 7,
     timing: {
-      holdMs: 2_000,
-      betweenScrollsMs: 1_000,
+      betweenScrollsMs: 2_000,
+      betweenMetarAndPricesMs: 5_000,
       routeScrollFrameMs: 20,
       airlineScrollFrameMs: 20,
       aircraftScrollFrameMs: 20,

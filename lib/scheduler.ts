@@ -107,6 +107,12 @@ export class TaskScheduler {
     };
     emptyActiveFlights();
     runScrapeTask().then(() => {
+      if (this.abortController?.signal.aborted) {
+        this.logger.debug(
+          "Scrape task was cancelled before scheduling next run"
+        );
+        return;
+      }
       this.scrapeIntervalId = setInterval(
         runScrapeTask,
         config.tasks.scrapeInterval
@@ -116,33 +122,26 @@ export class TaskScheduler {
 
   private startMatrixTask(): void {
     const runMatrixTask = async () => {
-      let cancelled = false;
       try {
-        await updateMatrixDisplay(this.ctx, this.abortController?.signal);
+        await updateMatrixDisplay(this.ctx, this.abortController!.signal);
       } catch (error) {
         // Silence AbortError, log other errors
         if (error instanceof DOMException && error.name === "AbortError") {
           this.logger.debug("Matrix task was cancelled");
-          cancelled = true;
         } else {
           this.logger.error("Matrix task failed", error);
         }
       }
 
-      if (
-        (!this.running || this.abortController?.signal.aborted || cancelled) &&
-        this.matrixTimeoutId !== null
-      ) {
+      if (this.running && !this.abortController?.signal.aborted) {
+        this.matrixTimeoutId = setTimeout(runMatrixTask, 0);
+      } else if (this.matrixTimeoutId !== null) {
         clearTimeout(this.matrixTimeoutId);
         this.matrixTimeoutId = null;
-      } else if (this.running && !cancelled) {
-        this.matrixTimeoutId = setTimeout(runMatrixTask, 0);
       }
     };
 
-    displayStartingUp(this.ctx, this.abortController?.signal).then(() =>
-      runMatrixTask()
-    );
+    displayStartingUp(this.ctx).then(() => runMatrixTask());
   }
 
   isRunning(): boolean {

@@ -56,25 +56,38 @@ export function getNestedOrDefault<T, K extends string, D>(
   return current ?? defaultValue;
 }
 
-export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException("Aborted", "AbortError"));
-      return;
-    }
+export function sleep(ms: number, abortSignal?: AbortSignal): Promise<void> {
+  if (abortSignal?.aborted) {
+    return Promise.reject(
+      abortSignal.reason ?? new DOMException("Sleep aborted", "AbortError")
+    );
+  }
 
-    const timeoutId = setTimeout(resolve, ms);
-    const abortHandler = () => {
-      clearTimeout(timeoutId);
-      reject(new DOMException("Aborted", "AbortError"));
+  if (ms <= 1000 || !abortSignal) {
+    return simpleSleep(ms);
+  }
+
+  return new Promise((resolve, reject) => {
+    let timeoutId: number | null = null;
+
+    const onAbort = () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      reject(
+        abortSignal?.reason ?? new DOMException("Sleep aborted", "AbortError")
+      );
     };
 
-    signal?.addEventListener("abort", abortHandler, { once: true });
+    timeoutId = setTimeout(() => {
+      abortSignal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+
+    abortSignal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
-/**
- * Delay execution for a given number of milliseconds with AbortSignal support.
- * Throws AbortError if signal is aborted during the delay.
- */
-export const delay = sleep;
+function simpleSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

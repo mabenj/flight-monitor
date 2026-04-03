@@ -1,4 +1,4 @@
-import { DatabaseSync, SQLOutputValue } from "node:sqlite";
+import { DatabaseSync } from "node:sqlite";
 import { MatrixClient } from "../rgb-matrix/matrix-client.ts";
 
 export class SettingsService {
