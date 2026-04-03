@@ -11,26 +11,28 @@ import { AppContext } from "./context.ts";
 import Log from "./log.ts";
 import { config } from "../config.ts";
 import { scrapeWeather } from "../tasks/scrape-weather.ts";
+import { sleep } from "./utils.ts";
 
 export class TaskScheduler {
   private scrapeIntervalId: number | null = null;
   private matrixTimeoutId: number | null = null;
   private running = false;
   private logger = new Log("scheduler");
-  private settingsChangeListener: (event: Event) => void;
+  private settingsChangeListener: (event: Event) => Promise<void>;
   private abortController: AbortController | null = null;
 
   constructor(private ctx: AppContext) {
-    this.settingsChangeListener = (event: Event) => {
+    this.settingsChangeListener = async (event: Event) => {
       if (event instanceof CustomEvent && event.detail?.type === "bounds") {
         this.logger.info("Bounds changed, restarting scheduler");
-        this.restart();
+        await this.restart();
       }
     };
   }
 
-  restart(): void {
+  async restart() {
     this.stop();
+    await sleep(200);
     this.start();
   }
 
@@ -122,20 +124,22 @@ export class TaskScheduler {
 
   private startMatrixTask(): void {
     const runMatrixTask = async () => {
+      let cancelled = false;
       try {
         await updateMatrixDisplay(this.ctx, this.abortController!.signal);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           this.logger.debug("Matrix task was cancelled");
+          cancelled = true;
         } else {
           this.logger.error("Matrix task failed", error);
         }
       }
 
-      if (this.running && !this.abortController?.signal.aborted) {
+      if (!cancelled && this.running && !this.abortController?.signal.aborted) {
         this.matrixTimeoutId = setTimeout(runMatrixTask, 0);
-      } else if (this.matrixTimeoutId !== null) {
-        clearTimeout(this.matrixTimeoutId);
+      } else {
+        this.matrixTimeoutId && clearTimeout(this.matrixTimeoutId);
         this.matrixTimeoutId = null;
         this.ctx.matrix.clear();
       }
