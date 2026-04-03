@@ -125,7 +125,6 @@ export class TaskScheduler {
       try {
         await updateMatrixDisplay(this.ctx, this.abortController!.signal);
       } catch (error) {
-        // Silence AbortError, log other errors
         if (error instanceof DOMException && error.name === "AbortError") {
           this.logger.debug("Matrix task was cancelled");
         } else {
@@ -138,6 +137,7 @@ export class TaskScheduler {
       } else if (this.matrixTimeoutId !== null) {
         clearTimeout(this.matrixTimeoutId);
         this.matrixTimeoutId = null;
+        this.ctx.matrix.clear();
       }
     };
 
