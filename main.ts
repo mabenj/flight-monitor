@@ -47,7 +47,7 @@ function setupShutdown(
   scheduler: TaskScheduler,
   logger: Log
 ): void {
-  Deno.addSignalListener("SIGINT", async () => {
+  const shutdown = async () => {
     logger.info("Shutting down...");
 
     scheduler.stop();
@@ -60,7 +60,10 @@ function setupShutdown(
     logger.info("Shutdown complete");
 
     Deno.exit(0);
-  });
+  };
+
+  Deno.addSignalListener("SIGINT", shutdown); // Ctrl+C / interactive
+  Deno.addSignalListener("SIGTERM", shutdown); // systemctl stop
 }
 
 /**

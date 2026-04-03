@@ -137,7 +137,25 @@ export class MatrixClient {
     } catch {
       // ignore
     }
-    return await this.process.status;
+
+    const KILL_TIMEOUT_MS = 5_000;
+
+    const killTimer = setTimeout(() => {
+      this.log.warn(
+        `matrixd did not exit within ${KILL_TIMEOUT_MS}ms, sending SIGKILL`
+      );
+      try {
+        this.process!.kill("SIGKILL");
+      } catch {
+        // process may have already exited between the check and the kill
+      }
+    }, KILL_TIMEOUT_MS);
+
+    try {
+      await this.process.status;
+    } finally {
+      clearTimeout(killTimer);
+    }
   }
 }
 
