@@ -140,46 +140,61 @@ async function showInfoScreen(
 
   const staticCmds = [timeCmd, tempCmd, dateCmd];
 
-  if (weather?.metar) {
-    const metarCmd: TextCmd = {
-      cmd: "text",
-      text: weather.metar,
-      y: 29,
-      x: 2,
-      ...config.matrix.colors.grey,
-    };
-    await renderFrame(matrix, staticCmds);
-    await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
-    await scrollLeft(
-      matrix,
-      metarCmd,
-      staticCmds,
-      config.matrix.timing.metarScrollFrameMs,
-      combinedSignal
-    );
-  }
-
-  if (electricityPrices.length > 0) {
-    const priceCmd: TextCmd = {
-      cmd: "text",
-      text: pricesString,
-      y: 29,
-      x: 2,
-      ...config.matrix.colors.grey,
-    };
-    await renderFrame(matrix, staticCmds);
-    await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
-    await scrollLeft(
-      matrix,
-      priceCmd,
-      staticCmds,
-      config.matrix.timing.priceScrollFrameMs,
-      combinedSignal
-    );
-
-    if (!weather?.metar && electricityPrices.length === 0) {
+  try {
+    if (weather?.metar) {
+      const metarCmd: TextCmd = {
+        cmd: "text",
+        text: weather.metar,
+        y: 29,
+        x: 2,
+        ...config.matrix.colors.grey,
+      };
       await renderFrame(matrix, staticCmds);
       await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
+      await scrollLeft(
+        matrix,
+        metarCmd,
+        staticCmds,
+        config.matrix.timing.metarScrollFrameMs,
+        combinedSignal
+      );
+    }
+
+    if (electricityPrices.length > 0) {
+      const priceCmd: TextCmd = {
+        cmd: "text",
+        text: pricesString,
+        y: 29,
+        x: 2,
+        ...config.matrix.colors.grey,
+      };
+      await renderFrame(matrix, staticCmds);
+      await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
+      await scrollLeft(
+        matrix,
+        priceCmd,
+        staticCmds,
+        config.matrix.timing.priceScrollFrameMs,
+        combinedSignal
+      );
+
+      if (!weather?.metar && electricityPrices.length === 0) {
+        await renderFrame(matrix, staticCmds);
+        await sleep(
+          config.matrix.timing.betweenMetarAndPricesMs,
+          combinedSignal
+        );
+      }
+    }
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      error.name === "AbortError" &&
+      error.message === "New flights available"
+    ) {
+      return;
+    } else {
+      throw error;
     }
   }
 
@@ -193,7 +208,7 @@ async function showInfoScreen(
 
     const checkInterval = setInterval(() => {
       if (checkHasNewFlights()) {
-        newFlightsAbortController.abort();
+        newFlightsAbortController.abort("New flights available");
       }
     }, 1000);
 
