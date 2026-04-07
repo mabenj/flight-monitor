@@ -29,7 +29,54 @@ export class FlightsService {
         LEFT JOIN airport as d ON f.destinationAirportId = d.id
     `;
     const rows = this.db.prepare(sql).all();
-    const flights: Flight[] = rows.map((row) => ({
+    const flights = rows.map((row) => this.mapRowToFlight(row));
+    return sortFlights(flights);
+  }
+
+  getFlightById(flightId: string): Flight | null {
+    const sql = `
+        SELECT 
+            f.*, 
+            a.modelCode as aircraftModelCode,
+            a.modelText as aircraftModelText,
+            a.registration as aircraftRegistration,
+            al.icao as airlineIcao,
+            al.iata as airlineIata,
+            al.name as airlineName,
+            o.icao as originIcao,
+            o.iata as originIata,
+            o.name as originName,
+            d.icao as destinationIcao,
+            d.iata as destinationIata,
+            d.name as destinationName
+        FROM flight AS f
+        LEFT JOIN aircraft AS a ON f.aircraftId = a.id
+        LEFT JOIN airline as al ON f.airlineId = al.id
+        LEFT JOIN airport as o ON f.originAirportId = o.id
+        LEFT JOIN airport as d ON f.destinationAirportId = d.id
+        WHERE f.id = ?
+        LIMIT 1
+    `;
+    const row = this.db.prepare(sql).get(flightId);
+    return row ? this.mapRowToFlight(row) : null;
+  }
+
+  setFlight(flight: Flight) {
+    try {
+      this.db.exec("BEGIN TRANSACTION;");
+      this.upsertAirlines([flight]);
+      this.upsertAirports([flight]);
+      this.upsertAircrafts([flight]);
+      this.upsertFlights([flight]);
+      this.db.exec("COMMIT;");
+    } catch (error) {
+      this.db.exec("ROLLBACK;");
+      throw error;
+    }
+  }
+
+  private mapRowToFlight(row: Record<string, SQLOutputValue>): Flight {
+    return {
       id: row.id as string,
       callsign: row.callsign as string,
       flightNumber: row.flightNumber as string,
@@ -67,8 +114,7 @@ export class FlightsService {
         iata: row.destinationIata as string,
         name: row.destinationName as string,
       },
-    }));
-    return sortFlights(flights);
+    };
   }
 
   setActiveFlights(flights: Flight[]) {

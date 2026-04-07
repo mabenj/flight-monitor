@@ -23,7 +23,7 @@ export class AppContext {
     public readonly events: EventTarget,
     public readonly priceService: ElectricityPriceService,
     public readonly matrix: MatrixClient,
-    public readonly flightRadar24ApiService: FlightRadar24ApiService
+    public readonly fr24: FlightRadar24ApiService
   ) {}
 
   static async create(db: DatabaseSync): Promise<AppContext> {

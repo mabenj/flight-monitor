@@ -6,11 +6,7 @@ export async function scrapeActiveFlights(
   signal?: AbortSignal
 ) {
   const logger = new Log("scrape-flights");
-  const {
-    boundsService,
-    flightsService,
-    flightRadar24ApiService: apiService,
-  } = ctx;
+  const { boundsService, flightsService, fr24 } = ctx;
 
   const bounds = boundsService.getActive();
   if (!bounds) {
@@ -18,7 +14,7 @@ export async function scrapeActiveFlights(
     return;
   }
 
-  const flights = await apiService.getFlightsByBounds(bounds, signal);
+  const flights = await fr24.getFlightsByBounds(bounds, signal);
 
   const activeBoundsId = boundsService.getActive()?.id;
   if (activeBoundsId !== bounds.id) {

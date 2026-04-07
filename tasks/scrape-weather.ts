@@ -5,11 +5,7 @@ import type { FlightRadar24ApiService } from "../services/flightradar24-api-serv
 
 export async function scrapeWeather(ctx: AppContext, signal?: AbortSignal) {
   const logger = new Log("scrape-weather");
-  const {
-    boundsService,
-    weatherService,
-    flightRadar24ApiService: apiService,
-  } = ctx;
+  const { boundsService, weatherService, fr24 } = ctx;
 
   const bounds = boundsService.getActive();
   if (!bounds?.airportCode) {
@@ -17,7 +13,7 @@ export async function scrapeWeather(ctx: AppContext, signal?: AbortSignal) {
     return;
   }
   logger.debug(`Scraping weather for airport ${bounds.airportCode}`);
-  const weather = await getWeather(bounds.airportCode, apiService, signal);
+  const weather = await getWeather(bounds.airportCode, fr24, signal);
   if (!weather) {
     logger.warn(`No weather found for airport ${bounds.airportCode}`);
     return;
@@ -27,10 +23,10 @@ export async function scrapeWeather(ctx: AppContext, signal?: AbortSignal) {
 
 async function getWeather(
   icao: string,
-  apiService: FlightRadar24ApiService,
+  fr24: FlightRadar24ApiService,
   signal?: AbortSignal
 ): Promise<Weather | null> {
-  const json = await apiService.getAirportInfo(icao, signal);
+  const json = await fr24.getAirportInfo(icao, signal);
   if (!json) {
     return null;
   }
