@@ -1,15 +1,15 @@
 import Log from "../lib/log.ts";
-import { BoundsService } from "../services/bounds-service.ts";
-import { WeatherService } from "../services/weather-service.ts";
-import { FlightRadar24ApiService } from "../services/flightradar24-api-service.ts";
 import { Weather } from "../types/weather.ts";
 import { AppContext } from "../lib/context.ts";
+import type { FlightRadar24ApiService } from "../services/flightradar24-api-service.ts";
 
 export async function scrapeWeather(ctx: AppContext, signal?: AbortSignal) {
   const logger = new Log("scrape-weather");
-  const boundsService = new BoundsService(ctx.db, ctx.events);
-  const weatherService = new WeatherService(ctx.db);
-  const apiService = new FlightRadar24ApiService();
+  const {
+    boundsService,
+    weatherService,
+    flightRadar24ApiService: apiService,
+  } = ctx;
 
   const bounds = boundsService.getActive();
   if (!bounds?.airportCode) {

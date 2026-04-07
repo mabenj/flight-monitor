@@ -10,6 +10,7 @@ import Log from "./log.ts";
 import { WeatherService } from "../services/weather-service.ts";
 import { MatrixClient } from "../rgb-matrix/matrix-client.ts";
 import { ElectricityPriceService } from "../services/electricity-price-service.ts";
+import { FlightRadar24ApiService } from "../services/flightradar24-api-service.ts";
 
 export class AppContext {
   private constructor(
@@ -21,7 +22,8 @@ export class AppContext {
     public readonly logger: Log,
     public readonly events: EventTarget,
     public readonly priceService: ElectricityPriceService,
-    public readonly matrix: MatrixClient
+    public readonly matrix: MatrixClient,
+    public readonly flightRadar24ApiService: FlightRadar24ApiService
   ) {}
 
   static async create(db: DatabaseSync): Promise<AppContext> {
@@ -36,7 +38,8 @@ export class AppContext {
       new Log("app"),
       events,
       new ElectricityPriceService(),
-      await MatrixClient.getInstance()
+      await MatrixClient.getInstance(),
+      new FlightRadar24ApiService()
     );
   }
 }
