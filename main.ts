@@ -63,7 +63,9 @@ function setupShutdown(
   };
 
   Deno.addSignalListener("SIGINT", shutdown); // Ctrl+C / interactive
-  Deno.addSignalListener("SIGTERM", shutdown); // systemctl stop
+  if (Deno.build.os !== "windows") {
+    Deno.addSignalListener("SIGTERM", shutdown); // systemd
+  }
 }
 
 /**
