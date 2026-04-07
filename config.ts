@@ -102,7 +102,7 @@ export const config = {
 
   logging: {
     level: "DEBUG",
-    filename: `${Deno.cwd()}/logs/flight-tracker.log`,
+    filename: `${Deno.cwd()}/logs/flight-monitor.log`,
     maxBytes: 10 * 1024 * 1024, // 10 MB per file
     maxBackupCount: 5,
   },
