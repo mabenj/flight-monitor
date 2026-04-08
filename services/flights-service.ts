@@ -3,7 +3,10 @@ import { Flight } from "../types/flight.ts";
 import { distinctBy } from "../lib/utils.ts";
 
 export class FlightsService {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(
+    private readonly db: DatabaseSync,
+    private readonly events: EventTarget
+  ) {}
 
   getActiveFlights(): Flight[] {
     const sql = `
@@ -69,6 +72,11 @@ export class FlightsService {
       this.upsertAircrafts([flight]);
       this.upsertFlights([flight]);
       this.db.exec("COMMIT;");
+      this.events.dispatchEvent(
+        new CustomEvent("flight:updated", {
+          detail: { flightId: flight.id },
+        })
+      );
     } catch (error) {
       this.db.exec("ROLLBACK;");
       throw error;

@@ -32,7 +32,7 @@ export class AppContext {
     return new AppContext(
       db,
       new BoundsService(db, events),
-      new FlightsService(db),
+      new FlightsService(db, events),
       new SettingsService(db),
       new WeatherService(db),
       new Log("app"),
