@@ -580,10 +580,10 @@ function getFlightRouteShort(flight: Flight): string {
   if (flight.origin.iata && flight.destination.iata) {
     return `${flight.origin.iata}-${flight.destination.iata}`;
   }
-  if (flight.origin) {
+  if (flight.origin?.iata) {
     return `FROM ${flight.origin.iata}`;
   }
-  if (flight.destination) {
+  if (flight.destination?.iata) {
     return `TO ${flight.destination.iata}`;
   }
 
