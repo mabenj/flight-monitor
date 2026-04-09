@@ -58,16 +58,12 @@ export default class Log {
   }
 
   error(message: string, error?: Error | unknown): void {
-    this.logger.error(message);
-    if (!error) {
-      return;
-    }
-
-    const detail =
-      error instanceof Error ? error.stack ?? error.message : String(error);
-    const parts = detail.split("\n");
-    for (const part of parts) {
-      this.logger.error(part);
+    if (error instanceof Error) {
+      this.logger.error(`${message}\n${error.stack}`);
+    } else if (error !== undefined) {
+      this.logger.error(`${message}\n${JSON.stringify(error)}`);
+    } else {
+      this.logger.error(message);
     }
   }
 }
