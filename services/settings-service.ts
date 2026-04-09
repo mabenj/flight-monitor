@@ -1,8 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
-import { MatrixClient } from "../rgb-matrix/matrix-client.ts";
+import { BrightnessChangedEvent } from "../lib/events.ts";
 
 export class SettingsService {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(
+    private readonly db: DatabaseSync,
+    private readonly events: EventTarget
+  ) {}
 
   get(key: string): string | null {
     const row = this.db
@@ -22,11 +25,8 @@ export class SettingsService {
     return value ? parseInt(value, 10) : 50;
   }
 
-  async setBrightness(brightness: number): Promise<void> {
+  setBrightness(brightness: number) {
     this.set("brightness", brightness.toString());
-    const matrix = await MatrixClient.getInstance();
-    if (matrix.isAvailable()) {
-      await matrix.brightness(brightness);
-    }
+    this.events.dispatchEvent(new BrightnessChangedEvent(brightness));
   }
 }

@@ -72,11 +72,6 @@ export class FlightsService {
       this.upsertAircrafts([flight]);
       this.upsertFlights([flight]);
       this.db.exec("COMMIT;");
-      this.events.dispatchEvent(
-        new CustomEvent("flight:updated", {
-          detail: { flightId: flight.id },
-        })
-      );
     } catch (error) {
       this.db.exec("ROLLBACK;");
       throw error;

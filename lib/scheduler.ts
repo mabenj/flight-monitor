@@ -12,20 +12,28 @@ import Log from "./log.ts";
 import { config } from "../config.ts";
 import { scrapeWeather } from "../tasks/scrape-weather.ts";
 import { sleep } from "./utils.ts";
+import { BoundsChangedEvent, BrightnessChangedEvent } from "./events.ts";
 
 export class TaskScheduler {
   private scrapeIntervalId: number | null = null;
   private matrixTimeoutId: number | null = null;
   private running = false;
   private logger = new Log("scheduler");
-  private settingsChangeListener: (event: Event) => Promise<void>;
+  private flightMonitorEventListener: (event: Event) => Promise<void>;
   private abortController: AbortController | null = null;
 
   constructor(private ctx: AppContext) {
-    this.settingsChangeListener = async (event: Event) => {
-      if (event instanceof CustomEvent && event.detail?.type === "bounds") {
+    this.flightMonitorEventListener = async (event: Event) => {
+      if (event instanceof BoundsChangedEvent) {
         this.logger.info("Bounds changed, restarting scheduler");
         await this.restart();
+      } else if (event instanceof BrightnessChangedEvent) {
+        this.logger.info("Brightness changed, updating matrix display");
+        try {
+          this.ctx.matrix.brightness(event.brightness);
+        } catch (error) {
+          this.logger.error("Failed to update matrix brightness", error);
+        }
       }
     };
   }
@@ -47,8 +55,8 @@ export class TaskScheduler {
     this.logger.info("Starting task scheduler");
 
     this.ctx.events.addEventListener(
-      "settingsChanged",
-      this.settingsChangeListener
+      "flight-monitor-event",
+      this.flightMonitorEventListener
     );
 
     this.startScrapeTask();
@@ -80,8 +88,8 @@ export class TaskScheduler {
     }
 
     this.ctx.events.removeEventListener(
-      "settingsChanged",
-      this.settingsChangeListener
+      "flight-monitor-event",
+      this.flightMonitorEventListener
     );
   }
 

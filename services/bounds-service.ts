@@ -1,6 +1,7 @@
 import { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import { Bounds } from "../types/bounds.ts";
 import { CreateResult } from "../types/create-result.ts";
+import { BoundsChangedEvent } from "../lib/events.ts";
 
 export class BoundsService {
   constructor(
@@ -110,11 +111,7 @@ export class BoundsService {
       this.db.exec("COMMIT;");
 
       if (bounds.isActive) {
-        this.events.dispatchEvent(
-          new CustomEvent("settingsChanged", {
-            detail: { type: "bounds", action: "activated" },
-          })
-        );
+        this.events.dispatchEvent(new BoundsChangedEvent(id));
       }
 
       return [null, this.get(id)!];

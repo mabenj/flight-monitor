@@ -5,7 +5,6 @@ import { config } from "../config.ts";
 import { Weather } from "../types/weather.ts";
 import { ElectricityPrice } from "../types/electricity-price.ts";
 import { AppContext } from "../lib/context.ts";
-import { FlightsService } from "../services/flights-service.ts";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
@@ -73,8 +72,6 @@ export async function updateMatrixDisplay(
     boundsService,
     priceService,
     settingsService,
-    fr24,
-    events,
   } = ctx;
 
   await matrix.brightness(settingsService.getBrightness());
