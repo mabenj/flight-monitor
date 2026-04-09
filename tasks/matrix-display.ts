@@ -477,7 +477,10 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
 
   const callsign: TextCmd = {
     cmd: "text",
-    text: flight.callsign ?? flight.aircraft?.registration ?? "",
+    text:
+      flight.callsign?.replace("Blocked", "") ??
+      flight.aircraft?.registration ??
+      "",
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
@@ -587,7 +590,7 @@ function getFlightRouteShort(flight: Flight): string {
     return `TO ${flight.destination.iata}`;
   }
 
-  return "???";
+  return "";
 }
 
 function getFlightRouteLong(flight: Flight): string {
