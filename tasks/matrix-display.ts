@@ -234,7 +234,7 @@ async function showFlight(
   await renderFrame(matrix, [
     cmds.flightCount,
     cmds.routeShort,
-    cmds.flightNumber,
+    cmds.callsign,
     aircraftForStatic,
     cmds.altitude,
   ]);
@@ -244,16 +244,16 @@ async function showFlight(
     await scrollLeft(
       matrix,
       cmds.routeLong,
-      [cmds.flightNumber, aircraftForStatic, cmds.altitude],
+      [cmds.callsign, aircraftForStatic, cmds.altitude],
       config.matrix.timing.routeScrollFrameMs,
       signal
     );
   }
 
-  if (cmds.airlineAndCallsign.text.trim()) {
+  if (cmds.airline.text.trim()) {
     await scrollLeft(
       matrix,
-      cmds.airlineAndCallsign,
+      cmds.airline,
       [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
       config.matrix.timing.airlineScrollFrameMs,
       signal
@@ -264,7 +264,7 @@ async function showFlight(
     await scrollLeft(
       matrix,
       cmds.aircraftLong,
-      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, cmds.altitude],
+      [cmds.flightCount, cmds.routeShort, cmds.callsign, cmds.altitude],
       config.matrix.timing.aircraftScrollFrameMs,
       signal
     );
@@ -274,7 +274,7 @@ async function showFlight(
     await scrollLeft(
       matrix,
       cmds.speedAndHeading,
-      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
+      [cmds.flightCount, cmds.routeShort, cmds.callsign, aircraftForStatic],
       config.matrix.timing.speedAndHeadingScrollFrameMs,
       signal
     );
@@ -284,7 +284,7 @@ async function showFlight(
     await scrollLeft(
       matrix,
       cmds.schedule,
-      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
+      [cmds.flightCount, cmds.routeShort, cmds.callsign, aircraftForStatic],
       config.matrix.timing.scheduleScrollFrameMs,
       signal
     );
@@ -293,7 +293,7 @@ async function showFlight(
   await renderFrame(matrix, [
     cmds.flightCount,
     cmds.routeShort,
-    cmds.flightNumber,
+    cmds.callsign,
     aircraftForStatic,
     cmds.altitude,
   ]);
@@ -475,18 +475,18 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     ...config.matrix.colors.magenta,
   };
 
-  const flightNumber: TextCmd = {
+  const callsign: TextCmd = {
     cmd: "text",
-    text: flight.flightNumber ?? flight.aircraft?.registration ?? "",
+    text: flight.callsign ?? flight.aircraft?.registration ?? "",
     y: 15,
     x: 2,
     ...config.matrix.colors.white,
   };
 
-  const airlineAndCallsign: TextCmd = {
+  const airline: TextCmd = {
     cmd: "text",
     text: `${flight.airline?.name ?? ""} ${
-      flight.callsign ?? flight.aircraft?.registration ?? ""
+      flight.flightNumber ?? flight.aircraft?.registration ?? ""
     }`.replace("Blocked", ""),
     y: 15,
     x: 2,
@@ -546,8 +546,8 @@ function flightToTextCmds(flight: Flight, index = 1, total = 1) {
     flightCount,
     routeShort,
     routeLong,
-    flightNumber,
-    airlineAndCallsign,
+    callsign,
+    airline,
     aircraftShort,
     aircraftLong,
     altitude,
