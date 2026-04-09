@@ -25,6 +25,7 @@ export default class Log {
             `${formatTimestamp(record.datetime)} [${record.levelName}] [${
               record.loggerName
             }]: ${record.msg}`,
+          bufferSize: 64 * 1024, // 64KB
         }),
       },
       loggers: {
