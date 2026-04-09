@@ -100,21 +100,7 @@ export async function updateMatrixDisplay(
         break;
       }
 
-      const flightId = flights[i].id;
-
-      // Fetch fresh flight data from FR24 periodically
-      const intervalId = setInterval(async () => {
-        const updatedFlight = await fr24.getFlightDetails(flightId);
-        if (updatedFlight) {
-          flightsService.setFlight(updatedFlight);
-        }
-      }, 1000);
-
-      await showFlight(ctx, flightId, i + 1, flights.length, signal).finally(
-        () => {
-          clearInterval(intervalId);
-        }
-      );
+      await showFlight(matrix, flights[i], i + 1, flights.length, signal);
     }
   }
 }
@@ -239,118 +225,82 @@ async function showInfoScreen(
 }
 
 async function showFlight(
-  ctx: AppContext,
-  flightId: string,
+  matrix: MatrixClient,
+  flight: Flight,
   index: number,
   total: number,
   signal: AbortSignal
 ): Promise<void> {
-  const { matrix, flightsService, events } = ctx;
+  const cmds = flightToTextCmds(flight, index, total);
+  const aircraftForStatic = chooseAircraftLine(cmds);
 
-  let flight = flightsService.getFlightById(flightId);
-  if (!flight) {
-    return;
+  await renderFrame(matrix, [
+    cmds.flightCount,
+    cmds.routeShort,
+    cmds.flightNumber,
+    aircraftForStatic,
+    cmds.altitude,
+  ]);
+  await sleep(config.matrix.timing.betweenScrollsMs, signal);
+
+  if (flight.origin?.name || flight.destination?.name) {
+    await scrollLeft(
+      matrix,
+      cmds.routeLong,
+      [cmds.flightNumber, aircraftForStatic, cmds.altitude],
+      config.matrix.timing.routeScrollFrameMs,
+      signal
+    );
   }
 
-  let cmds = flightToTextCmds(flight, index, total);
-  let aircraftForStatic = chooseAircraftLine(cmds);
-
-  const handleFlightUpdate = (event: Event) => {
-    if (event instanceof CustomEvent && event.detail.flightId === flightId) {
-      const updated = flightsService.getFlightById(flightId);
-      if (updated) {
-        flight = updated;
-        cmds = flightToTextCmds(flight, index, total);
-        aircraftForStatic = chooseAircraftLine(cmds);
-      }
-    }
-  };
-
-  events.addEventListener("flight:updated", handleFlightUpdate, {
-    signal,
-  });
-
-  try {
-    await renderFrame(matrix, [
-      cmds.flightCount,
-      cmds.routeShort,
-      cmds.flightNumber,
-      aircraftForStatic,
-      cmds.altitude,
-    ]);
-    await sleep(config.matrix.timing.betweenScrollsMs, signal);
-
-    if (flight.origin?.name || flight.destination?.name) {
-      await scrollLeft(
-        matrix,
-        cmds.routeLong,
-        [cmds.flightNumber, aircraftForStatic, cmds.altitude],
-        config.matrix.timing.routeScrollFrameMs,
-        signal
-      );
-    }
-
-    if (cmds.airlineAndCallsign.text.trim()) {
-      await scrollLeft(
-        matrix,
-        cmds.airlineAndCallsign,
-        [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
-        config.matrix.timing.airlineScrollFrameMs,
-        signal
-      );
-    }
-
-    if (needsScroll(cmds.aircraftLong)) {
-      await scrollLeft(
-        matrix,
-        cmds.aircraftLong,
-        [cmds.flightCount, cmds.routeShort, cmds.flightNumber, cmds.altitude],
-        config.matrix.timing.aircraftScrollFrameMs,
-        signal
-      );
-    }
-
-    if (cmds.speedAndHeading.text.trim()) {
-      await scrollLeft(
-        matrix,
-        cmds.speedAndHeading,
-        [
-          cmds.flightCount,
-          cmds.routeShort,
-          cmds.flightNumber,
-          aircraftForStatic,
-        ],
-        config.matrix.timing.speedAndHeadingScrollFrameMs,
-        signal
-      );
-    }
-
-    if (cmds.schedule.text.trim()) {
-      await scrollLeft(
-        matrix,
-        cmds.schedule,
-        [
-          cmds.flightCount,
-          cmds.routeShort,
-          cmds.flightNumber,
-          aircraftForStatic,
-        ],
-        config.matrix.timing.scheduleScrollFrameMs,
-        signal
-      );
-    }
-
-    await renderFrame(matrix, [
-      cmds.flightCount,
-      cmds.routeShort,
-      cmds.flightNumber,
-      aircraftForStatic,
-      cmds.altitude,
-    ]);
-    await sleep(config.matrix.timing.betweenScrollsMs, signal);
-  } finally {
-    events.removeEventListener("flight:updated", handleFlightUpdate);
+  if (cmds.airlineAndCallsign.text.trim()) {
+    await scrollLeft(
+      matrix,
+      cmds.airlineAndCallsign,
+      [cmds.flightCount, cmds.routeShort, aircraftForStatic, cmds.altitude],
+      config.matrix.timing.airlineScrollFrameMs,
+      signal
+    );
   }
+
+  if (needsScroll(cmds.aircraftLong)) {
+    await scrollLeft(
+      matrix,
+      cmds.aircraftLong,
+      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, cmds.altitude],
+      config.matrix.timing.aircraftScrollFrameMs,
+      signal
+    );
+  }
+
+  if (cmds.speedAndHeading.text.trim()) {
+    await scrollLeft(
+      matrix,
+      cmds.speedAndHeading,
+      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
+      config.matrix.timing.speedAndHeadingScrollFrameMs,
+      signal
+    );
+  }
+
+  if (cmds.schedule.text.trim()) {
+    await scrollLeft(
+      matrix,
+      cmds.schedule,
+      [cmds.flightCount, cmds.routeShort, cmds.flightNumber, aircraftForStatic],
+      config.matrix.timing.scheduleScrollFrameMs,
+      signal
+    );
+  }
+
+  await renderFrame(matrix, [
+    cmds.flightCount,
+    cmds.routeShort,
+    cmds.flightNumber,
+    aircraftForStatic,
+    cmds.altitude,
+  ]);
+  await sleep(config.matrix.timing.betweenScrollsMs, signal);
 }
 
 async function renderFrame(
