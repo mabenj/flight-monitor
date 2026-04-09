@@ -25,7 +25,6 @@ export default class Log {
             `${formatTimestamp(record.datetime)} [${record.levelName}] [${
               record.loggerName
             }]: ${record.msg}`,
-          bufferSize: 0,
         }),
       },
       loggers: {
@@ -58,12 +57,17 @@ export default class Log {
   }
 
   error(message: string, error?: Error | unknown): void {
-    const detail = error
-      ? ` | ${
-          error instanceof Error ? error.stack ?? error.message : String(error)
-        }`
-      : "";
-    this.logger.error(`${message}${detail}`);
+    this.logger.error(message);
+    if (!error) {
+      return;
+    }
+
+    const detail =
+      error instanceof Error ? error.stack ?? error.message : String(error);
+    const parts = detail.split("\n");
+    for (const part of parts) {
+      this.logger.error(part);
+    }
   }
 }
 
