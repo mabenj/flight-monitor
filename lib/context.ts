@@ -6,7 +6,6 @@ import { DatabaseSync } from "node:sqlite";
 import { BoundsService } from "../services/bounds-service.ts";
 import { FlightsService } from "../services/flights-service.ts";
 import { SettingsService } from "../services/settings-service.ts";
-import Log from "./log.ts";
 import { WeatherService } from "../services/weather-service.ts";
 import { MatrixClient } from "../rgb-matrix/matrix-client.ts";
 import { ElectricityPriceService } from "../services/electricity-price-service.ts";
@@ -19,7 +18,6 @@ export class AppContext {
     public readonly flightsService: FlightsService,
     public readonly settingsService: SettingsService,
     public readonly weatherService: WeatherService,
-    public readonly logger: Log,
     public readonly events: EventTarget,
     public readonly priceService: ElectricityPriceService,
     public readonly matrix: MatrixClient,
@@ -35,7 +33,6 @@ export class AppContext {
       new FlightsService(db, events),
       new SettingsService(db, events),
       new WeatherService(db),
-      new Log("app"),
       events,
       new ElectricityPriceService(),
       await MatrixClient.getInstance(),

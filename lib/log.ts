@@ -1,77 +1,52 @@
-import * as stdLog from "@std/log";
-import { RotatingFileHandler } from "@std/log/rotating-file-handler";
-import { ConsoleHandler } from "@std/log/console-handler";
-import { config } from "../config.ts";
+// logging.ts
+import {
+  configure,
+  getLogger,
+  getConsoleSink,
+  getAnsiColorFormatter,
+} from "@logtape/logtape";
+import { getRotatingFileSink } from "@logtape/file";
 import path from "node:path";
+import { config } from "../config.ts";
 
-export default class Log {
-  private readonly logger: stdLog.Logger;
+let initialized = false;
 
-  constructor(private readonly name: string) {
-    stdLog.setup({
-      handlers: {
-        console: new ConsoleHandler(config.logging.level, {
-          formatter: (record) =>
-            `${formatTimestamp(record.datetime)} [${record.levelName}] [${
-              record.loggerName
-            }]: ${record.msg}`,
-          useColors: true,
+export async function initializeLogging(): Promise<void> {
+  if (initialized) {
+    return;
+  }
+
+  await Deno.mkdir(path.dirname(config.logging.filename), { recursive: true });
+
+  await configure({
+    sinks: {
+      console: getConsoleSink({
+        formatter: getAnsiColorFormatter({
+          timestamp: "date-time",
         }),
-        file: new RotatingFileHandler(config.logging.level, {
-          filename: config.logging.filename,
-          maxBytes: config.logging.maxBytes,
-          maxBackupCount: config.logging.maxBackupCount,
-          formatter: (record) =>
-            `${formatTimestamp(record.datetime)} [${record.levelName}] [${
-              record.loggerName
-            }]: ${record.msg}`,
-          bufferSize: 64 * 1024, // 64KB
-        }),
+      }),
+      file: getRotatingFileSink(config.logging.filename, {
+        maxSize: config.logging.maxBytes,
+        maxFiles: config.logging.maxBackupCount,
+      }),
+    },
+    loggers: [
+      {
+        category: ["fm"],
+        lowestLevel: "info",
+        sinks: ["console", "file"],
       },
-      loggers: {
-        [name]: {
-          level: config.logging.level,
-          handlers: ["console", "file"],
-        },
+      {
+        category: ["logtape", "meta"],
+        lowestLevel: "warning",
+        sinks: ["console"],
       },
-    });
+    ],
+  });
 
-    this.logger = stdLog.getLogger(name);
-  }
-
-  static async initialize() {
-    await Deno.mkdir(path.dirname(config.logging.filename), {
-      recursive: true,
-    });
-  }
-
-  debug(message: string): void {
-    this.logger.debug(message);
-  }
-
-  info(message: string): void {
-    this.logger.info(message);
-  }
-
-  warn(message: string): void {
-    this.logger.warn(message);
-  }
-
-  error(message: string, error?: Error | unknown): void {
-    this.logger.error(message);
-    if (!error) {
-      return;
-    }
-
-    const detail =
-      error instanceof Error ? error.stack ?? error.message : String(error);
-    const parts = detail.split("\n");
-    for (const part of parts) {
-      this.logger.error(part);
-    }
-  }
+  initialized = true;
 }
 
-function formatTimestamp(date: Date) {
-  return date.toISOString().replace("T", " ").slice(0, 19);
+export function logger(name: string) {
+  return getLogger(["fm", name]);
 }

@@ -5,7 +5,7 @@
 import { Middleware, Context } from "@oak/oak";
 import { AppContext } from "./context.ts";
 import { config } from "../config.ts";
-import Log from "./log.ts";
+import { logger } from "./log.ts";
 
 /**
  * Inject context into router state
@@ -22,8 +22,11 @@ export function contextMiddleware(ctx: AppContext): Middleware {
  */
 export function loggingMiddleware(): Middleware {
   return async (ctx: Context, next: () => Promise<unknown>) => {
-    const logger = new Log("api");
-    logger.info(`${ctx.request.method} ${ctx.request.url.pathname}`);
+    const log = logger("api");
+    log.info("{method} {url}", {
+      method: ctx.request.method,
+      url: ctx.request.url.pathname,
+    });
     await next();
   };
 }

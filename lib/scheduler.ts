@@ -8,31 +8,39 @@ import {
   updateMatrixDisplay,
 } from "../tasks/matrix-display.ts";
 import { AppContext } from "./context.ts";
-import Log from "./log.ts";
 import { config } from "../config.ts";
 import { scrapeWeather } from "../tasks/scrape-weather.ts";
 import { sleep } from "./utils.ts";
 import { BoundsChangedEvent, BrightnessChangedEvent } from "./events.ts";
+import { logger } from "./log.ts";
 
 export class TaskScheduler {
   private scrapeIntervalId: number | null = null;
   private matrixTimeoutId: number | null = null;
   private running = false;
-  private logger = new Log("scheduler");
+  private log = logger(TaskScheduler.name);
   private flightMonitorEventListener: (event: Event) => Promise<void>;
   private abortController: AbortController | null = null;
 
   constructor(private ctx: AppContext) {
     this.flightMonitorEventListener = async (event: Event) => {
       if (event instanceof BoundsChangedEvent) {
-        this.logger.info("Bounds changed, restarting scheduler");
+        this.log.info("Bounds changed, restarting scheduler");
         await this.restart();
       } else if (event instanceof BrightnessChangedEvent) {
-        this.logger.info("Brightness changed, updating matrix display");
+        this.log.info(
+          "Brightness changed, updating matrix display {brightness}",
+          {
+            brightness: event.brightness,
+          }
+        );
         try {
           this.ctx.matrix.brightness(event.brightness);
         } catch (error) {
-          this.logger.error("Failed to update matrix brightness", error);
+          this.log.error(
+            "Failed to update matrix brightness",
+            error instanceof Error ? error : new Error(String(error))
+          );
         }
       }
     };
@@ -46,13 +54,13 @@ export class TaskScheduler {
 
   start(): void {
     if (this.running) {
-      this.logger.warn("Scheduler already running");
+      this.log.warn("Scheduler already running");
       return;
     }
 
     this.running = true;
     this.abortController = new AbortController();
-    this.logger.info("Starting task scheduler");
+    this.log.info("Starting task scheduler");
 
     this.ctx.events.addEventListener(
       "flight-monitor-event",
@@ -69,7 +77,7 @@ export class TaskScheduler {
     }
 
     this.running = false;
-    this.logger.info("Stopping task scheduler");
+    this.log.info("Stopping task scheduler");
 
     // Abort all running tasks immediately
     if (this.abortController) {
@@ -104,9 +112,12 @@ export class TaskScheduler {
       } catch (error) {
         // Silence AbortError, log other errors
         if (error instanceof DOMException && error.name === "AbortError") {
-          this.logger.debug("Scrape task was cancelled");
+          this.log.debug("Scrape task was cancelled");
         } else {
-          this.logger.error("Scrape task failed", error);
+          this.log.error(
+            "Scrape task failed",
+            error instanceof Error ? error : new Error(String(error))
+          );
         }
       }
 
@@ -118,9 +129,7 @@ export class TaskScheduler {
     emptyActiveFlights();
     runScrapeTask().then(() => {
       if (this.abortController?.signal.aborted) {
-        this.logger.debug(
-          "Scrape task was cancelled before scheduling next run"
-        );
+        this.log.debug("Scrape task was cancelled before scheduling next run");
         return;
       }
       this.scrapeIntervalId = setInterval(
@@ -137,10 +146,13 @@ export class TaskScheduler {
         await updateMatrixDisplay(this.ctx, this.abortController!.signal);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
-          this.logger.debug("Matrix task was cancelled");
+          this.log.debug("Matrix task was cancelled");
           cancelled = true;
         } else {
-          this.logger.error("Matrix task failed", error);
+          this.log.error(
+            "Matrix task failed",
+            error instanceof Error ? error : new Error(String(error))
+          );
         }
       }
 

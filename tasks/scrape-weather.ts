@@ -1,21 +1,26 @@
-import Log from "../lib/log.ts";
 import { Weather } from "../types/weather.ts";
 import { AppContext } from "../lib/context.ts";
 import type { FlightRadar24ApiService } from "../services/flightradar24-api-service.ts";
+import { logger } from "../lib/log.ts";
+
+const log = logger("scrape-weather");
 
 export async function scrapeWeather(ctx: AppContext, signal?: AbortSignal) {
-  const logger = new Log("scrape-weather");
   const { boundsService, weatherService, fr24 } = ctx;
 
   const bounds = boundsService.getActive();
   if (!bounds?.airportCode) {
-    logger.warn("No active bounds with airport code found");
+    log.warn("No active bounds with airport code found");
     return;
   }
-  logger.debug(`Scraping weather for airport ${bounds.airportCode}`);
+  log.debug(`Scraping weather for airport {airportCode}`, {
+    airportCode: bounds.airportCode,
+  });
   const weather = await getWeather(bounds.airportCode, fr24, signal);
   if (!weather) {
-    logger.warn(`No weather found for airport ${bounds.airportCode}`);
+    log.warn(`No weather found for airport {airportCode}`, {
+      airportCode: bounds.airportCode,
+    });
     return;
   }
   weatherService.setWeather(weather);

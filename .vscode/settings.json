@@ -3,6 +3,7 @@
     "Aircrafts",
     "callsign",
     "flightradar",
+    "logtape",
     "mapbox",
     "mapboxgl",
     "matrixd",

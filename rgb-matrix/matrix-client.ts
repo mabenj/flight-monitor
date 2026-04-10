@@ -1,4 +1,4 @@
-import Log from "../lib/log.ts";
+import { logger } from "../lib/log.ts";
 
 export type TextCmd = {
   cmd: "text";
@@ -24,7 +24,7 @@ export class MatrixClient {
   private process: Deno.ChildProcess | null = null;
   private readonly encoder = new TextEncoder();
   private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
-  private readonly log = new Log("MatrixClient");
+  private readonly log = logger(MatrixClient.name);
   private available: boolean = false;
 
   private constructor() {}
@@ -32,7 +32,8 @@ export class MatrixClient {
   private async initialize(): Promise<void> {
     if (Deno.build.os !== "linux") {
       this.log.warn(
-        `Matrix display not supported on ${Deno.build.os}, all operations will be no-ops`
+        `Matrix display not supported on {os}, all operations will be no-ops`,
+        { os: Deno.build.os }
       );
       return;
     }
@@ -50,9 +51,8 @@ export class MatrixClient {
       await readReadyLine(stdoutForReady).catch((error) => {
         this.available = false;
         this.log.error(
-          `Python daemon failed to start: ${
-            error instanceof Error ? error.message : String(error)
-          }`
+          `Python daemon failed to start`,
+          error instanceof Error ? error : new Error(String(error))
         );
         throw error;
       });
@@ -67,7 +67,7 @@ export class MatrixClient {
     } catch (error) {
       this.log.error(
         "Failed to initialize matrix display, operations will be no-ops",
-        error
+        error instanceof Error ? error : new Error(String(error))
       );
       this.available = false;
     }
@@ -142,7 +142,10 @@ export class MatrixClient {
 
     const killTimer = setTimeout(() => {
       this.log.warn(
-        `matrixd did not exit within ${KILL_TIMEOUT_MS}ms, sending SIGKILL`
+        `matrixd did not exit within {timeout}ms, sending SIGKILL`,
+        {
+          timeout: KILL_TIMEOUT_MS,
+        }
       );
       try {
         this.process!.kill("SIGKILL");

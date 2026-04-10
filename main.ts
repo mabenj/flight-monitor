@@ -11,18 +11,19 @@ import {
 } from "./lib/middleware.ts";
 import { setupRoutes } from "./lib/routes.ts";
 import { ApiError } from "./lib/errors.ts";
-import Log from "./lib/log.ts";
 import { MatrixClient } from "./rgb-matrix/matrix-client.ts";
 import { config } from "./config.ts";
+import { initializeLogging, logger } from "./lib/log.ts";
+
+const log = logger("main");
 
 async function main() {
-  await Log.initialize();
-  const logger = new Log("main");
+  await initializeLogging();
 
   const db = await Database.getDb();
   const appContext = await AppContext.create(db);
   const scheduler = new TaskScheduler(appContext);
-  setupShutdown(db, scheduler, logger);
+  setupShutdown(db, scheduler);
 
   const app = new Application();
   const router = new Router();
@@ -38,17 +39,14 @@ async function main() {
   scheduler.start();
 
   const PORT = config.server.port;
-  logger.info(`Server is running on http://localhost:${PORT}`);
+  const url = `http://localhost:${PORT}`;
+  log.info("Server is running on {url}", { url });
   await app.listen({ port: PORT });
 }
 
-function setupShutdown(
-  db: DatabaseSync,
-  scheduler: TaskScheduler,
-  logger: Log
-): void {
+function setupShutdown(db: DatabaseSync, scheduler: TaskScheduler): void {
   const shutdown = async () => {
-    logger.info("Shutting down...");
+    log.info("Shutting down...");
 
     scheduler.stop();
 
@@ -57,7 +55,7 @@ function setupShutdown(
     }
 
     await (await MatrixClient.getInstance()).close();
-    logger.info("Shutdown complete");
+    log.info("Shutdown complete");
 
     Deno.exit(0);
   };
@@ -76,20 +74,18 @@ function errorHandlingMiddleware() {
     try {
       await next();
     } catch (error) {
-      const logger = new Log("error-handler");
-
       if (error instanceof ApiError) {
         ctx.response.status = error.statusCode;
         ctx.response.body = error.body || { error: error.message };
-        logger.warn(`API Error: ${error.message}`);
+        log.warn("API Error: {message}", { message: error.message });
       } else if (error instanceof Error) {
         ctx.response.status = 500;
         ctx.response.body = { error: "Internal server error" };
-        logger.error("Unhandled error", error);
+        log.error("Unhandled error", error);
       } else {
         ctx.response.status = 500;
         ctx.response.body = { error: "Internal server error" };
-        logger.error("Unhandled error", error);
+        log.error("Unhandled error", new Error(String(error)));
       }
     }
   };

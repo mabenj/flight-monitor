@@ -1,5 +1,5 @@
 import { config } from "../config.ts";
-import Log from "../lib/log.ts";
+import { logger } from "../lib/log.ts";
 import { ElectricityPrice } from "../types/electricity-price.ts";
 
 const cache = {
@@ -8,7 +8,7 @@ const cache = {
 };
 
 export class ElectricityPriceService {
-  private readonly logger = new Log("electricity-prices");
+  private readonly log = logger(ElectricityPriceService.name);
 
   async getElectricityPrice(): Promise<ElectricityPrice[]> {
     const now = Date.now();
@@ -19,7 +19,7 @@ export class ElectricityPriceService {
       return cache.prices;
     }
     try {
-      this.logger.debug("Fetching electricity prices");
+      this.log.debug("Fetching electricity prices");
       const res = await fetch(config.electricity.pricesUrl);
       if (!res.ok) {
         throw new Error(`API request failed: ${res.status} ${res.statusText}`);
@@ -41,7 +41,10 @@ export class ElectricityPriceService {
       cache.prices = prices;
       cache.lastUpdate = now;
     } catch (err) {
-      this.logger.error(`Failed to fetch electricity prices: ${err}`);
+      this.log.error(
+        `Failed to fetch electricity prices`,
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
     return cache.prices;
   }

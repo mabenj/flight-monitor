@@ -1,16 +1,17 @@
-import Log from "../lib/log.ts";
 import { AppContext } from "../lib/context.ts";
+import { logger } from "../lib/log.ts";
+
+const log = logger("scrape-active-flights");
 
 export async function scrapeActiveFlights(
   ctx: AppContext,
   signal?: AbortSignal
 ) {
-  const logger = new Log("scrape-flights");
   const { boundsService, flightsService, fr24 } = ctx;
 
   const bounds = boundsService.getActive();
   if (!bounds) {
-    logger.info("No active bounds found");
+    log.info("No active bounds found");
     return;
   }
 
@@ -18,9 +19,7 @@ export async function scrapeActiveFlights(
 
   const activeBoundsId = boundsService.getActive()?.id;
   if (activeBoundsId !== bounds.id) {
-    logger.info(
-      "Active bounds changed during flight retrieval, skipping update"
-    );
+    log.info("Active bounds changed during flight retrieval, skipping update");
     return;
   }
   flightsService.setActiveFlights(flights);

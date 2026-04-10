@@ -1,15 +1,11 @@
 import { getNested, getNestedOrDefault, sleep } from "../lib/utils.ts";
 import { Bounds } from "../types/bounds.ts";
 import { Flight } from "../types/flight.ts";
-import Log from "../lib/log.ts";
 import { config } from "../config.ts";
+import { logger } from "../lib/log.ts";
 
 export class FlightRadar24ApiService {
-  private logger: Log;
-
-  constructor() {
-    this.logger = new Log("fr24-api");
-  }
+  private log = logger(FlightRadar24ApiService.name);
 
   /**
    * Fetches flights within given bounds and retrieves details for each flight.
@@ -28,7 +24,7 @@ export class FlightRadar24ApiService {
     const flights: Flight[] = [];
     for (const flightId of flightIds) {
       if (signal?.aborted) {
-        this.logger.debug("Flight detail retrieval cancelled");
+        this.log.debug("Flight detail retrieval cancelled");
         break;
       }
 
@@ -69,17 +65,23 @@ export class FlightRadar24ApiService {
 
       const flightData = await response.json();
       if (!flightData) {
-        this.logger.error(
-          `Failed to deserialize flight details for flight ${flightId}`
+        this.log.error(
+          `Failed to deserialize flight details for flight {flightId}`,
+          {
+            flightId,
+            responseStatus: response.status,
+            responseText: await response.text(),
+          }
         );
         return null;
       }
 
       return this.parseFlight(flightId, flightData);
     } catch (error) {
-      this.logger.error(
-        `Error fetching flight details for ${flightId}: ${error}`
-      );
+      this.log.error(`Error fetching flight details for {flightId}: {error}`, {
+        flightId,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
       return null;
     }
   }
@@ -105,7 +107,10 @@ export class FlightRadar24ApiService {
 
       return await response.json();
     } catch (error) {
-      this.logger.error(`Error fetching airport info for ${icao}: ${error}`);
+      this.log.error(`Error fetching airport info for {icao}: {error}`, {
+        icao,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
       return null;
     }
   }
@@ -126,7 +131,10 @@ export class FlightRadar24ApiService {
         }
       );
 
-      this.logger.debug(`Fetching flights from bounds '${bounds.label}'`);
+      this.log.debug(`Fetching flights from bounds {label}`, {
+        label: bounds.label,
+        url: url.toString(),
+      });
 
       const response = await fetch(url.toString(), {
         headers: config.flightradar24.headers,
@@ -142,15 +150,21 @@ export class FlightRadar24ApiService {
         (key) => key !== "full_count" && key !== "version" && key !== "stats"
       );
 
-      this.logger.debug(
-        `Found ${flightIds.length} flights in the response from bounds '${bounds.label}'`
+      this.log.debug(
+        `Found {count} flights in the response from bounds {label}`,
+        {
+          label: bounds.label,
+          url: url.toString(),
+          count: flightIds.length,
+        }
       );
 
       return flightIds;
     } catch (error) {
-      this.logger.error(
-        `Error fetching flight list for bounds '${bounds.label}': ${error}`
-      );
+      this.log.error(`Error fetching flight list for bounds {label}: {error}`, {
+        label: bounds.label,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
       return [];
     }
   }
@@ -160,10 +174,14 @@ export class FlightRadar24ApiService {
    */
   private validateJsonResponse(response: Response, url: string): boolean {
     if (!response.headers.get("content-type")?.includes("application/json")) {
-      this.logger.error(
-        `Unexpected content type: ${response.headers.get(
-          "content-type"
-        )} with status ${response.status} (${response.statusText}) from ${url}`
+      this.log.error(
+        `Unexpected content type: {contentType} with status {status} ({statusText}) from {url}`,
+        {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get("content-type"),
+        }
       );
       return false;
     }
