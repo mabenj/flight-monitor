@@ -3,24 +3,20 @@ import { Bounds } from "../types/bounds.ts";
 import { Flight } from "../types/flight.ts";
 import { config } from "../config.ts";
 import { logger } from "../lib/log.ts";
+import { Weather } from "../types/weather.ts";
 
 export class FlightRadar24ApiService {
   private log = logger(FlightRadar24ApiService.name);
 
-  /**
-   * Fetches flights within given bounds and retrieves details for each flight.
-   */
   async getFlightsByBounds(
     bounds: Bounds,
     signal?: AbortSignal
   ): Promise<Flight[]> {
-    // Fetch list of flights in bounds
     const flightIds = await this.fetchFlightIds(bounds, signal);
     if (flightIds.length === 0) {
       return [];
     }
 
-    // Fetch details for each flight
     const flights: Flight[] = [];
     for (const flightId of flightIds) {
       if (signal?.aborted) {
@@ -38,14 +34,12 @@ export class FlightRadar24ApiService {
     return flights;
   }
 
-  /**
-   * Fetches detailed information for a specific flight.
-   */
   async getFlightDetails(
     flightId: string,
     signal?: AbortSignal
   ): Promise<Flight | null> {
     try {
+      this.log.debug(`Fetching flight details for {flightId}`, { flightId });
       const response = await fetch(
         `${config.flightradar24.detailsUrl}${flightId}`,
         {
@@ -89,14 +83,12 @@ export class FlightRadar24ApiService {
     }
   }
 
-  /**
-   * Fetches airport information.
-   */
-  async getAirportInfo(
+  async getAirportWeather(
     icao: string,
     signal?: AbortSignal
-  ): Promise<Record<string, unknown> | null> {
+  ): Promise<Weather | null> {
     try {
+      this.log.debug(`Fetching airport weather for {icao}`, { icao });
       const response = await fetch(
         `${config.flightradar24.airportUrl}?code=${icao}`,
         { signal }
@@ -108,7 +100,20 @@ export class FlightRadar24ApiService {
         return null;
       }
 
-      return await response.json();
+      const json = await response.json();
+      if (!json) {
+        this.log.error(
+          `Failed to deserialize airport info for {icao}: {responseStatus} {responseText}`,
+          {
+            icao,
+            responseStatus: response.status,
+            responseText: await response.text(),
+          }
+        );
+        return null;
+      }
+
+      return this.parseAirportWeather(json);
     } catch (error) {
       this.log.error(`Error fetching airport info for {icao}: {error}`, {
         icao,
@@ -118,9 +123,6 @@ export class FlightRadar24ApiService {
     }
   }
 
-  /**
-   * Private helper: Fetches the list of flight IDs in given bounds.
-   */
   private async fetchFlightIds(
     bounds: Bounds,
     signal?: AbortSignal
@@ -138,7 +140,6 @@ export class FlightRadar24ApiService {
         label: bounds.label,
         url: url.toString(),
       });
-
       const response = await fetch(url.toString(), {
         headers: config.flightradar24.headers,
         signal,
@@ -153,14 +154,9 @@ export class FlightRadar24ApiService {
         (key) => key !== "full_count" && key !== "version" && key !== "stats"
       );
 
-      this.log.debug(
-        `Found {count} flights in the response from bounds {label}`,
-        {
-          label: bounds.label,
-          url: url.toString(),
-          count: flightIds.length,
-        }
-      );
+      this.log.debug(`Found {count} flights`, {
+        count: flightIds.length,
+      });
 
       return flightIds;
     } catch (error) {
@@ -172,9 +168,6 @@ export class FlightRadar24ApiService {
     }
   }
 
-  /**
-   * Private helper: Validates that response has JSON content-type.
-   */
   private validateJsonResponse(response: Response, url: string): boolean {
     if (!response.headers.get("content-type")?.includes("application/json")) {
       this.log.error(
@@ -191,9 +184,6 @@ export class FlightRadar24ApiService {
     return true;
   }
 
-  /**
-   * Private helper: Parses flight details from API response.
-   */
   private parseFlight(id: string, flight: Record<string, unknown>): Flight {
     const trail =
       (getNested(flight, "trail") as Array<Record<string, unknown>>) || [];
@@ -240,9 +230,28 @@ export class FlightRadar24ApiService {
     };
   }
 
-  /**
-   * Private helper: Converts bounds to query string format.
-   */
+  // deno-lint-ignore no-explicit-any
+  private parseAirportWeather(jsonData: any): Weather | null {
+    const error = jsonData["errors"]?.["message"];
+    if (error) {
+      throw new Error(error as string);
+    }
+
+    const data = jsonData["result"]?.["response"]?.["airport"]?.["pluginData"];
+    if (!data?.["details"]) {
+      return null;
+    }
+
+    return {
+      airportIcao: data["details"]?.["code"]?.["icao"],
+      airportIata: data["details"]?.["code"]?.["iata"],
+      metar: data["weather"]?.["metar"],
+      skyCondition: data["weather"]?.["sky"]?.["condition"]?.["text"],
+      tempCelsius: data["weather"]?.["temp"]?.["celsius"],
+      timestamp: data["weather"]?.["time"],
+    };
+  }
+
   private boundsToString(bounds: Bounds): string {
     return `${bounds.latitudeMax.toFixed(4)},${bounds.latitudeMin.toFixed(
       4

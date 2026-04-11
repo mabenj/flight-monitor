@@ -1,11 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
 import * as path from "@std/path";
 import { config } from "../config.ts";
+import { logger } from "../lib/log.ts";
 
 const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "./migrations");
 
 export class Database {
+  private readonly log = logger(Database.name);
   public db: DatabaseSync;
 
   private constructor() {
@@ -19,6 +21,7 @@ export class Database {
   }
 
   public close() {
+    this.log.info("Closing database connection");
     this.db.close();
   }
 
@@ -33,6 +36,9 @@ export class Database {
     const targetVersion = 5; // Bump when adding migrations
 
     if (currentVersion === targetVersion) {
+      this.log.info("Database is up to date: version {currentVersion}", {
+        currentVersion,
+      });
       return;
     }
 
@@ -49,11 +55,13 @@ export class Database {
       for (const file of files.sort()) {
         const version = file.split(".sql")[0]?.split("-")?.at(-1);
         if (version == null) {
+          this.log.warn(`Skipping migration file with invalid name: ${file}`);
           continue;
         }
         if (currentVersion >= version) {
           continue;
         }
+        this.log.info(`Applying migration: ${file}`);
         const filePath = path.join(MIGRATIONS_DIR, file);
         const sql = await Deno.readTextFile(filePath);
         this.db.exec(sql);
@@ -63,6 +71,7 @@ export class Database {
       );
       this.db.exec("COMMIT TRANSACTION;");
     } catch (error) {
+      this.log.error(`Migration failed: {error}`, { error });
       this.db.exec("ROLLBACK TRANSACTION;");
       throw error;
     }

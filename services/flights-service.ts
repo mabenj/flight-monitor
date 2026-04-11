@@ -1,6 +1,10 @@
 import { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import { Flight } from "../types/flight.ts";
 import { distinctBy } from "../lib/utils.ts";
+import {
+  ActiveFlightsChangedEvent,
+  FlightUpdatedEvent,
+} from "../lib/events.ts";
 
 export class FlightsService {
   constructor(
@@ -72,52 +76,11 @@ export class FlightsService {
       this.upsertAircrafts([flight]);
       this.upsertFlights([flight]);
       this.db.exec("COMMIT;");
+      this.events.dispatchEvent(new FlightUpdatedEvent(flight.id));
     } catch (error) {
       this.db.exec("ROLLBACK;");
       throw error;
     }
-  }
-
-  private mapRowToFlight(row: Record<string, SQLOutputValue>): Flight {
-    return {
-      id: row.id as string,
-      callsign: row.callsign as string,
-      flightNumber: row.flightNumber as string,
-      altitude: row.altitude as number,
-      groundSpeed: row.groundSpeed as number,
-      heading: row.heading as number,
-      timestamp: row.timestamp as number,
-      departureTime: {
-        scheduled: row.scheduledDeparture as number,
-        estimated: row.estimatedDeparture as number,
-        actual: row.actualDeparture as number,
-      },
-      arrivalTime: {
-        scheduled: row.scheduledArrival as number,
-        estimated: row.estimatedArrival as number,
-        actual: row.actualArrival as number,
-      },
-      aircraft: {
-        modelCode: row.aircraftModelCode as string,
-        modelText: row.aircraftModelText as string,
-        registration: row.aircraftRegistration as string,
-      },
-      airline: {
-        icao: row.airlineIcao as string,
-        iata: row.airlineIata as string,
-        name: row.airlineName as string,
-      },
-      origin: {
-        icao: row.originIcao as string,
-        iata: row.originIata as string,
-        name: row.originName as string,
-      },
-      destination: {
-        icao: row.destinationIcao as string,
-        iata: row.destinationIata as string,
-        name: row.destinationName as string,
-      },
-    };
   }
 
   setActiveFlights(flights: Flight[]) {
@@ -136,6 +99,9 @@ export class FlightsService {
         statement.run(flight.id);
       }
       this.db.exec("COMMIT;");
+      this.events.dispatchEvent(
+        new ActiveFlightsChangedEvent(flights.map((f) => f.id))
+      );
     } catch (error) {
       this.db.exec("ROLLBACK;");
       throw error;
@@ -350,6 +316,48 @@ export class FlightsService {
         this.db.prepare(sql).run(...Object.values(rowValues));
       }
     }
+  }
+
+  private mapRowToFlight(row: Record<string, SQLOutputValue>): Flight {
+    return {
+      id: row.id as string,
+      callsign: row.callsign as string,
+      flightNumber: row.flightNumber as string,
+      altitude: row.altitude as number,
+      groundSpeed: row.groundSpeed as number,
+      heading: row.heading as number,
+      timestamp: row.timestamp as number,
+      departureTime: {
+        scheduled: row.scheduledDeparture as number,
+        estimated: row.estimatedDeparture as number,
+        actual: row.actualDeparture as number,
+      },
+      arrivalTime: {
+        scheduled: row.scheduledArrival as number,
+        estimated: row.estimatedArrival as number,
+        actual: row.actualArrival as number,
+      },
+      aircraft: {
+        modelCode: row.aircraftModelCode as string,
+        modelText: row.aircraftModelText as string,
+        registration: row.aircraftRegistration as string,
+      },
+      airline: {
+        icao: row.airlineIcao as string,
+        iata: row.airlineIata as string,
+        name: row.airlineName as string,
+      },
+      origin: {
+        icao: row.originIcao as string,
+        iata: row.originIata as string,
+        name: row.originName as string,
+      },
+      destination: {
+        icao: row.destinationIcao as string,
+        iata: row.destinationIata as string,
+        name: row.destinationName as string,
+      },
+    };
   }
 }
 

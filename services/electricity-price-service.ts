@@ -19,7 +19,7 @@ export class ElectricityPriceService {
       return cache.prices;
     }
     try {
-      this.log.debug("Fetching electricity prices");
+      this.log.debug("Fetching fresh electricity prices");
       const res = await fetch(config.electricity.pricesUrl);
       if (!res.ok) {
         throw new Error(`API request failed: ${res.status} ${res.statusText}`);

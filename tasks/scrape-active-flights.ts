@@ -11,7 +11,6 @@ export async function scrapeActiveFlights(
 
   const bounds = boundsService.getActive();
   if (!bounds) {
-    log.info("No active bounds found");
     return;
   }
 

@@ -1,6 +1,6 @@
 import { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import { CreateResult } from "../types/create-result.ts";
-import { Weather } from "../types/weather.ts";
+import { Weather } from "../types/Weather.ts";
 
 export class WeatherService {
   constructor(private readonly db: DatabaseSync) {}

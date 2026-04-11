@@ -11,7 +11,12 @@ import { AppContext } from "./context.ts";
 import { config } from "../config.ts";
 import { scrapeWeather } from "../tasks/scrape-weather.ts";
 import { sleep } from "./utils.ts";
-import { BoundsChangedEvent, BrightnessChangedEvent } from "./events.ts";
+import {
+  ActiveFlightsChangedEvent,
+  BoundsChangedEvent,
+  BrightnessChangedEvent,
+  FlightUpdatedEvent,
+} from "./events.ts";
 import { logger } from "./log.ts";
 
 export class TaskScheduler {
@@ -28,19 +33,22 @@ export class TaskScheduler {
         this.log.info("Bounds changed, restarting scheduler");
         await this.restart();
       } else if (event instanceof BrightnessChangedEvent) {
+        const brightness = event.brightness;
         this.log.info(
-          "Brightness changed, updating matrix display {brightness}",
-          {
-            brightness: event.brightness,
-          }
+          "Brightness changed, updating matrix display brightness to {brightness}",
+          { brightness }
         );
         try {
-          this.ctx.matrix.brightness(event.brightness);
+          this.ctx.matrix.brightness(brightness);
         } catch (error) {
           this.log.error("Failed to update matrix brightness: {error}", {
             error,
           });
         }
+      } else if (event instanceof FlightUpdatedEvent) {
+        // do nothing
+      } else if (event instanceof ActiveFlightsChangedEvent) {
+        // do nothing
       } else {
         this.log.warn("Received unknown event: {event}", { event });
       }
@@ -124,6 +132,7 @@ export class TaskScheduler {
         this.scrapeIntervalId = null;
       }
     };
+
     emptyActiveFlights();
     runScrapeTask().then(() => {
       if (this.abortController?.signal.aborted) {
@@ -161,9 +170,5 @@ export class TaskScheduler {
     };
 
     displayStartingUp(this.ctx).then(() => runMatrixTask());
-  }
-
-  isRunning(): boolean {
-    return this.running;
   }
 }

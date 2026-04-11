@@ -38,6 +38,7 @@ export class MatrixClient {
       return;
     }
 
+    this.log.info("Initializing matrix display and spawning daemon...");
     try {
       const command = new Deno.Command("sudo", {
         args: ["-E", "python", "./rgb-matrix/matrixd.py"],
@@ -111,10 +112,13 @@ export class MatrixClient {
   }
 
   async close() {
+    this.log.info("Closing matrix client and shutting down daemon...");
+
     if (!this.available || !this.process) {
       this.log.debug("Matrix not available, nothing to close");
       return;
     }
+
     try {
       await this.send({ cmd: "exit" });
     } catch {
@@ -136,7 +140,6 @@ export class MatrixClient {
     }
 
     const KILL_TIMEOUT_MS = 5_000;
-
     const killTimer = setTimeout(() => {
       this.log.warn(
         `matrixd did not exit within {timeout}ms, sending SIGKILL`,
