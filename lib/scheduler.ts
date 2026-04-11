@@ -41,6 +41,8 @@ export class TaskScheduler {
             error,
           });
         }
+      } else {
+        this.log.warn("Received unknown event: {event}", { event });
       }
     };
   }

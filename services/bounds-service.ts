@@ -67,15 +67,12 @@ export class BoundsService {
       }
       this.db.exec("COMMIT;");
 
+      const createdBounds = this.get(Number(id))!;
       if (bounds.isActive) {
-        this.events.dispatchEvent(
-          new CustomEvent("settingsChanged", {
-            detail: { type: "bounds", action: "activated" },
-          })
-        );
+        this.events.dispatchEvent(new BoundsChangedEvent(createdBounds.id));
       }
 
-      return [null, this.get(Number(id))!];
+      return [null, createdBounds];
     } catch (error) {
       this.db.exec("ROLLBACK;");
       throw error;
