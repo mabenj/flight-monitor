@@ -30,7 +30,7 @@ export async function initializeLogging(): Promise<void> {
     loggers: [
       {
         category: ["FM"],
-        lowestLevel: "info",
+        lowestLevel: "debug",
         sinks: ["console", "file"],
       },
       {
