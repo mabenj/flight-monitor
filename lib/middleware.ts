@@ -23,7 +23,7 @@ export function contextMiddleware(ctx: AppContext): Middleware {
 export function loggingMiddleware(): Middleware {
   return async (ctx: Context, next: () => Promise<unknown>) => {
     const log = logger("api");
-    log.info("{method} {url}", {
+    log.info(`${ctx.request.method} {url}`, {
       method: ctx.request.method,
       url: ctx.request.url.pathname,
     });

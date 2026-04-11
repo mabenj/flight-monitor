@@ -40,11 +40,8 @@ export class ElectricityPriceService {
           .sort((a, b) => a.startDate - b.startDate) || [];
       cache.prices = prices;
       cache.lastUpdate = now;
-    } catch (err) {
-      this.log.error(
-        `Failed to fetch electricity prices`,
-        err instanceof Error ? err : new Error(String(err))
-      );
+    } catch (error) {
+      this.log.error(`Failed to fetch electricity prices: {error}`, { error });
     }
     return cache.prices;
   }

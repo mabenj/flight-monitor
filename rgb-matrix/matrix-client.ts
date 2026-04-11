@@ -50,24 +50,21 @@ export class MatrixClient {
       const [stdoutForReady, stdoutForLog] = this.process.stdout.tee();
       await readReadyLine(stdoutForReady).catch((error) => {
         this.available = false;
-        this.log.error(
-          `Python daemon failed to start`,
-          error instanceof Error ? error : new Error(String(error))
-        );
+        this.log.error(`Python daemon failed to start: {error}`, { error });
         throw error;
       });
-      logStreamLines(
-        this.process.stderr,
-        this.log.error.bind(this.log),
-        "[matrixd] "
+      logStreamLines(this.process.stderr, (errorLine) =>
+        this.log.error("[matrixd] " + errorLine)
       );
-      logStreamLines(stdoutForLog, this.log.info.bind(this.log), "[matrixd] ");
+      logStreamLines(stdoutForLog, (line) =>
+        this.log.debug("[matrixd] " + line)
+      );
       this.available = true;
       this.log.info("Matrix display initialized successfully");
     } catch (error) {
       this.log.error(
-        "Failed to initialize matrix display, operations will be no-ops",
-        error instanceof Error ? error : new Error(String(error))
+        "Failed to initialize matrix display, operations will be no-ops: {error}",
+        { error }
       );
       this.available = false;
     }
@@ -191,8 +188,7 @@ async function readReadyLine(
 
 function logStreamLines(
   stream: ReadableStream<Uint8Array>,
-  log: (line: string) => void,
-  prefix = ""
+  log: (line: string) => void
 ) {
   (async () => {
     const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
@@ -206,10 +202,10 @@ function logStreamLines(
       while ((idx = buf.indexOf("\n")) !== -1) {
         const line = buf.slice(0, idx).replace(/\r$/, "");
         buf = buf.slice(idx + 1);
-        if (line.length) log(prefix ? `${prefix}${line}` : line);
+        if (line.length) log(line);
       }
     }
     const tail = buf.trim();
-    if (tail) log(prefix ? `${prefix}${tail}` : tail);
+    if (tail) log(tail);
   })();
 }

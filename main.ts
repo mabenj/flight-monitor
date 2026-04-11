@@ -78,14 +78,10 @@ function errorHandlingMiddleware() {
         ctx.response.status = error.statusCode;
         ctx.response.body = error.body || { error: error.message };
         log.warn("API Error: {message}", { message: error.message });
-      } else if (error instanceof Error) {
-        ctx.response.status = 500;
-        ctx.response.body = { error: "Internal server error" };
-        log.error("Unhandled error", error);
       } else {
         ctx.response.status = 500;
         ctx.response.body = { error: "Internal server error" };
-        log.error("Unhandled error", new Error(String(error)));
+        log.error("Unhandled error {error}", { error });
       }
     }
   };

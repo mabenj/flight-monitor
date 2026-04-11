@@ -37,10 +37,9 @@ export class TaskScheduler {
         try {
           this.ctx.matrix.brightness(event.brightness);
         } catch (error) {
-          this.log.error(
-            "Failed to update matrix brightness",
-            error instanceof Error ? error : new Error(String(error))
-          );
+          this.log.error("Failed to update matrix brightness: {error}", {
+            error,
+          });
         }
       }
     };
@@ -114,10 +113,7 @@ export class TaskScheduler {
         if (error instanceof DOMException && error.name === "AbortError") {
           this.log.debug("Scrape task was cancelled");
         } else {
-          this.log.error(
-            "Scrape task failed",
-            error instanceof Error ? error : new Error(String(error))
-          );
+          this.log.error("Scrape task failed {error}", { error });
         }
       }
 
@@ -149,10 +145,7 @@ export class TaskScheduler {
           this.log.debug("Matrix task was cancelled");
           cancelled = true;
         } else {
-          this.log.error(
-            "Matrix task failed",
-            error instanceof Error ? error : new Error(String(error))
-          );
+          this.log.error("Matrix task failed {error}", { error });
         }
       }
 

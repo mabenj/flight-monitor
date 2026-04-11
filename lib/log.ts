@@ -1,13 +1,8 @@
-// logging.ts
-import {
-  configure,
-  getLogger,
-  getConsoleSink,
-  getAnsiColorFormatter,
-} from "@logtape/logtape";
+import { configure, getLogger, getConsoleSink } from "@logtape/logtape";
 import { getRotatingFileSink } from "@logtape/file";
 import path from "node:path";
 import { config } from "../config.ts";
+import { getPrettyFormatter } from "@logtape/pretty";
 
 let initialized = false;
 
@@ -21,8 +16,9 @@ export async function initializeLogging(): Promise<void> {
   await configure({
     sinks: {
       console: getConsoleSink({
-        formatter: getAnsiColorFormatter({
-          timestamp: "date-time",
+        formatter: getPrettyFormatter({
+          timestamp: "date-time-timezone",
+          level: "FULL",
         }),
       }),
       file: getRotatingFileSink(config.logging.filename, {
@@ -32,7 +28,7 @@ export async function initializeLogging(): Promise<void> {
     },
     loggers: [
       {
-        category: ["fm"],
+        category: ["FM"],
         lowestLevel: "info",
         sinks: ["console", "file"],
       },
@@ -48,5 +44,5 @@ export async function initializeLogging(): Promise<void> {
 }
 
 export function logger(name: string) {
-  return getLogger(["fm", name]);
+  return getLogger(["FM", name]);
 }

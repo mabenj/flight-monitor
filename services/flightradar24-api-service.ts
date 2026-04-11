@@ -66,7 +66,7 @@ export class FlightRadar24ApiService {
       const flightData = await response.json();
       if (!flightData) {
         this.log.error(
-          `Failed to deserialize flight details for flight {flightId}`,
+          `Failed to deserialize flight details for flight {flightId}: {responseStatus} {responseText}`,
           {
             flightId,
             responseStatus: response.status,
@@ -78,10 +78,13 @@ export class FlightRadar24ApiService {
 
       return this.parseFlight(flightId, flightData);
     } catch (error) {
-      this.log.error(`Error fetching flight details for {flightId}: {error}`, {
-        flightId,
-        error: error instanceof Error ? error : new Error(String(error)),
-      });
+      this.log.error(
+        `Error fetching flight details for flight {flightId}: {error}`,
+        {
+          flightId,
+          error,
+        }
+      );
       return null;
     }
   }
@@ -109,7 +112,7 @@ export class FlightRadar24ApiService {
     } catch (error) {
       this.log.error(`Error fetching airport info for {icao}: {error}`, {
         icao,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error,
       });
       return null;
     }
@@ -163,7 +166,7 @@ export class FlightRadar24ApiService {
     } catch (error) {
       this.log.error(`Error fetching flight list for bounds {label}: {error}`, {
         label: bounds.label,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error,
       });
       return [];
     }
