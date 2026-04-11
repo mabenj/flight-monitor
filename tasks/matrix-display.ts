@@ -8,7 +8,7 @@ import {
   ActiveFlightsChangedEvent,
   FlightMonitorEvent,
 } from "../lib/events.ts";
-import { Weather } from "../types/weather.ts.rename";
+import { Weather } from "../types/weather.ts";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
