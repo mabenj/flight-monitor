@@ -20,6 +20,7 @@ export async function initializeLogging(): Promise<void> {
           timestamp: "date-time-timezone",
           level: "FULL",
           wordWrap: false,
+          categoryWidth: 30,
         }),
       }),
       file: getRotatingFileSink(config.logging.filename, {
