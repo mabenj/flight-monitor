@@ -19,6 +19,7 @@ export async function initializeLogging(): Promise<void> {
         formatter: getPrettyFormatter({
           timestamp: "date-time-timezone",
           level: "FULL",
+          wordWrap: false,
         }),
       }),
       file: getRotatingFileSink(config.logging.filename, {
