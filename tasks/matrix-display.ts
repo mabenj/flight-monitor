@@ -72,6 +72,7 @@ export async function updateMatrixDisplay(
     boundsService,
     priceService,
     settingsService,
+    fr24,
   } = ctx;
 
   await matrix.brightness(settingsService.getBrightness());
@@ -90,15 +91,30 @@ export async function updateMatrixDisplay(
       () => flightsService.getActiveFlights().length > 0,
       signal
     );
-  } else {
-    for (let i = 0; i < flights.length; i++) {
-      flights = flightsService.getActiveFlights();
-      if (i >= flights.length || signal.aborted) {
-        break;
-      }
+    return;
+  }
 
-      await showFlight(matrix, flights[i], i + 1, flights.length, signal);
+  const refreshFlight = async (flightId: string) => {
+    const flight = await fr24.getFlightDetails(flightId);
+    if (!flight) {
+      return;
     }
+    flightsService.setFlight(flight);
+  };
+
+  for (let i = 0; i < flights.length; i++) {
+    flights = flightsService.getActiveFlights();
+    if (i >= flights.length || signal.aborted) {
+      break;
+    }
+
+    const currentFlight = flights[i];
+    const nextFlight = flights[i === flights.length - 1 ? 0 : i + 1];
+    const STALE_THRESHOLD_MS = 5000;
+    if (Date.now() - nextFlight.timestamp * 1000 > STALE_THRESHOLD_MS) {
+      refreshFlight(nextFlight.id);
+    }
+    await showFlight(matrix, currentFlight, i + 1, flights.length, signal);
   }
 }
 
