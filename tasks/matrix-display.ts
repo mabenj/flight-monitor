@@ -2,9 +2,13 @@ import { sleep } from "../lib/utils.ts";
 import { Flight } from "../types/flight.ts";
 import { MatrixClient, type TextCmd } from "../rgb-matrix/matrix-client.ts";
 import { config } from "../config.ts";
-import { Weather } from "../types/weather.ts";
 import { ElectricityPrice } from "../types/electricity-price.ts";
 import { AppContext } from "../lib/context.ts";
+import {
+  ActiveFlightsChangedEvent,
+  FlightMonitorEvent,
+} from "../lib/events.ts";
+import { Weather } from "../types/weather.ts.rename";
 
 type FlightTextCmds = ReturnType<typeof flightToTextCmds>;
 
@@ -65,34 +69,149 @@ export async function updateMatrixDisplay(
   ctx: AppContext,
   signal: AbortSignal
 ): Promise<void> {
-  const {
-    matrix,
-    flightsService,
-    weatherService,
-    boundsService,
-    priceService,
-    settingsService,
-    fr24,
-  } = ctx;
+  const { matrix, flightsService, settingsService } = ctx;
 
   await matrix.brightness(settingsService.getBrightness());
 
-  let flights = flightsService.getActiveFlights();
+  const flights = flightsService.getActiveFlights();
   if (flights.length === 0) {
-    const bounds = boundsService.getActive();
-    const weather = bounds?.airportCode
-      ? weatherService.getWeather(bounds.airportCode)
-      : null;
-    const prices = await priceService.getCurrentAndUpcomingPrices();
-    await showInfoScreen(
-      matrix,
-      weather,
-      prices,
-      () => flightsService.getActiveFlights().length > 0,
-      signal
-    );
-    return;
+    await holdInfoScreenUntilNewActiveFlights(ctx, signal);
   }
+
+  await cycleFlightsUntilNoActiveFlights(ctx, signal);
+}
+
+async function holdInfoScreenUntilNewActiveFlights(
+  ctx: AppContext,
+  signal: AbortSignal
+): Promise<void> {
+  const { matrix, boundsService, weatherService, priceService, events } = ctx;
+
+  const newFlightsAbortController = new AbortController();
+  const combinedSignal = AbortSignal.any([
+    signal,
+    newFlightsAbortController.signal,
+  ]);
+  events.addEventListener(FlightMonitorEvent.type, (event: Event) => {
+    if (
+      event instanceof ActiveFlightsChangedEvent &&
+      event.flightIds.length > 0
+    ) {
+      newFlightsAbortController.abort("New flights available");
+    }
+  });
+
+  const { airportCode } = boundsService.getActive() ?? {};
+  let electricityPrices = await priceService.getCurrentAndUpcomingPrices();
+  while (!combinedSignal.aborted) {
+    const weather = airportCode ? weatherService.getWeather(airportCode) : null;
+    priceService.getCurrentAndUpcomingPrices().then((prices) => {
+      electricityPrices = prices;
+    });
+
+    try {
+      if (weather?.metar) {
+        const metarCmd: TextCmd = {
+          cmd: "text",
+          text: weather.metar,
+          y: 29,
+          x: 2,
+          ...config.matrix.colors.grey,
+        };
+        await renderFrame(matrix, getStaticCmds(weather));
+        await sleep(
+          config.matrix.timing.betweenMetarAndPricesMs,
+          combinedSignal
+        );
+        await scrollLeft(
+          matrix,
+          metarCmd,
+          getStaticCmds(weather),
+          config.matrix.timing.metarScrollFrameMs,
+          combinedSignal
+        );
+      }
+
+      if (electricityPrices.length > 0) {
+        const priceCmd: TextCmd = {
+          cmd: "text",
+          text: formatPrices(electricityPrices),
+          y: 29,
+          x: 2,
+          ...config.matrix.colors.grey,
+        };
+        await renderFrame(matrix, getStaticCmds(weather));
+        await sleep(
+          config.matrix.timing.betweenMetarAndPricesMs,
+          combinedSignal
+        );
+        await scrollLeft(
+          matrix,
+          priceCmd,
+          getStaticCmds(weather),
+          config.matrix.timing.priceScrollFrameMs,
+          combinedSignal
+        );
+
+        if (!weather?.metar && electricityPrices.length === 0) {
+          await renderFrame(matrix, getStaticCmds(weather));
+          await sleep(
+            config.matrix.timing.betweenMetarAndPricesMs,
+            combinedSignal
+          );
+        }
+      }
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === "AbortError" &&
+        error.message === "New flights available"
+      ) {
+        break;
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  function getStaticCmds(weather: Weather | null): TextCmd[] {
+    const now = new Date();
+    const timeString = formatTime(now);
+    const dateString = formatDate(now);
+    const tempC = weather?.tempCelsius ? `${weather?.tempCelsius}°C` : "";
+
+    const timeCmd: TextCmd = {
+      cmd: "text",
+      text: timeString,
+      y: 8,
+      x: 2,
+      ...config.matrix.colors.magenta,
+    };
+    const tempCmd: TextCmd = {
+      cmd: "text",
+      text: tempC,
+      y: 8,
+      x: 62 - tempC.length * config.matrix.displayFontWidthPx,
+      ...config.matrix.colors.white,
+    };
+    const dateCmd: TextCmd = {
+      cmd: "text",
+      text: dateString,
+      y: 15,
+      x: 2,
+      ...config.matrix.colors.cyan,
+    };
+    const staticCmds = [timeCmd, tempCmd, dateCmd];
+
+    return staticCmds;
+  }
+}
+
+async function cycleFlightsUntilNoActiveFlights(
+  ctx: AppContext,
+  signal: AbortSignal
+): Promise<void> {
+  const { matrix, flightsService, fr24 } = ctx;
 
   const refreshFlight = async (flightId: string) => {
     const flight = await fr24.getFlightDetails(flightId);
@@ -102,138 +221,22 @@ export async function updateMatrixDisplay(
     flightsService.setFlight(flight);
   };
 
-  for (let i = 0; i < flights.length; i++) {
-    flights = flightsService.getActiveFlights();
-    if (i >= flights.length || signal.aborted) {
+  let flights = flightsService.getActiveFlights();
+  let currentFlight = flights[0];
+  while (currentFlight && !signal.aborted) {
+    const index = flights.findIndex((f) => f.id === currentFlight.id);
+    if (index === -1) {
       break;
     }
-
-    const currentFlight = flights[i];
-    const nextFlight = flights[i === flights.length - 1 ? 0 : i + 1];
+    const nextFlight = flights[(index + 1) % flights.length];
     const STALE_THRESHOLD_MS = 5000;
     if (Date.now() - nextFlight.timestamp * 1000 > STALE_THRESHOLD_MS) {
       refreshFlight(nextFlight.id);
     }
-    await showFlight(matrix, currentFlight, i + 1, flights.length, signal);
-  }
-}
+    await showFlight(matrix, currentFlight, index + 1, flights.length, signal);
 
-async function showInfoScreen(
-  matrix: MatrixClient,
-  weather: Weather | null,
-  electricityPrices: ElectricityPrice[],
-  checkHasNewFlights: () => boolean,
-  signal: AbortSignal
-): Promise<void> {
-  const combinedSignal = AbortSignal.any([signal, getNewFlightsAbortSignal()]);
-
-  const now = new Date();
-  const timeString = formatTime(now);
-  const dateString = formatDate(now);
-  const pricesString = formatPrices(electricityPrices);
-  const tempC = weather?.tempCelsius ? `${weather?.tempCelsius}°C` : "";
-
-  const timeCmd: TextCmd = {
-    cmd: "text",
-    text: timeString,
-    y: 8,
-    x: 2,
-    ...config.matrix.colors.magenta,
-  };
-  const tempCmd: TextCmd = {
-    cmd: "text",
-    text: tempC,
-    y: 8,
-    x: 62 - tempC.length * config.matrix.displayFontWidthPx,
-    ...config.matrix.colors.white,
-  };
-  const dateCmd: TextCmd = {
-    cmd: "text",
-    text: dateString,
-    y: 15,
-    x: 2,
-    ...config.matrix.colors.cyan,
-  };
-
-  const staticCmds = [timeCmd, tempCmd, dateCmd];
-
-  try {
-    if (weather?.metar) {
-      const metarCmd: TextCmd = {
-        cmd: "text",
-        text: weather.metar,
-        y: 29,
-        x: 2,
-        ...config.matrix.colors.grey,
-      };
-      await renderFrame(matrix, staticCmds);
-      await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
-      await scrollLeft(
-        matrix,
-        metarCmd,
-        staticCmds,
-        config.matrix.timing.metarScrollFrameMs,
-        combinedSignal
-      );
-    }
-
-    if (electricityPrices.length > 0) {
-      const priceCmd: TextCmd = {
-        cmd: "text",
-        text: pricesString,
-        y: 29,
-        x: 2,
-        ...config.matrix.colors.grey,
-      };
-      await renderFrame(matrix, staticCmds);
-      await sleep(config.matrix.timing.betweenMetarAndPricesMs, combinedSignal);
-      await scrollLeft(
-        matrix,
-        priceCmd,
-        staticCmds,
-        config.matrix.timing.priceScrollFrameMs,
-        combinedSignal
-      );
-
-      if (!weather?.metar && electricityPrices.length === 0) {
-        await renderFrame(matrix, staticCmds);
-        await sleep(
-          config.matrix.timing.betweenMetarAndPricesMs,
-          combinedSignal
-        );
-      }
-    }
-  } catch (error) {
-    if (
-      error instanceof DOMException &&
-      error.name === "AbortError" &&
-      error.message === "New flights available"
-    ) {
-      return;
-    } else {
-      throw error;
-    }
-  }
-
-  function getNewFlightsAbortSignal(): AbortSignal {
-    const newFlightsAbortController = new AbortController();
-    const timeout = AbortSignal.timeout(20_000); // Fallback in case something goes wrong with the flight checking
-    const combinedSignal = AbortSignal.any([
-      newFlightsAbortController.signal,
-      timeout,
-    ]);
-
-    const checkInterval = setInterval(() => {
-      if (checkHasNewFlights()) {
-        newFlightsAbortController.abort("New flights available");
-      }
-    }, 1000);
-
-    combinedSignal.addEventListener("abort", () => {
-      clearInterval(checkInterval);
-    });
-
-    return newFlightsAbortController.signal;
+    flights = flightsService.getActiveFlights();
+    currentFlight = flights[(index + 1) % flights.length];
   }
 }
 

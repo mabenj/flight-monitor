@@ -1,6 +1,7 @@
-class FlightMonitorEvent<T> extends CustomEvent<T> {
+export abstract class FlightMonitorEvent<T> extends CustomEvent<T> {
+  public static readonly type = "flight-monitor-event";
   constructor(eventInitDict?: CustomEventInit<T>) {
-    super("flight-monitor-event", eventInitDict);
+    super(FlightMonitorEvent.type, eventInitDict);
   }
 }
 

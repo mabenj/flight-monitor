@@ -1,7 +1,3 @@
-/**
- * Background task scheduler
- */
-
 import { scrapeActiveFlights } from "../tasks/scrape-active-flights.ts";
 import {
   displayStartingUp,
@@ -15,6 +11,7 @@ import {
   ActiveFlightsChangedEvent,
   BoundsChangedEvent,
   BrightnessChangedEvent,
+  FlightMonitorEvent,
   FlightUpdatedEvent,
 } from "./events.ts";
 import { logger } from "./log.ts";
@@ -72,7 +69,7 @@ export class TaskScheduler {
     this.log.info("Starting task scheduler");
 
     this.ctx.events.addEventListener(
-      "flight-monitor-event",
+      FlightMonitorEvent.type,
       this.flightMonitorEventListener
     );
 
@@ -105,7 +102,7 @@ export class TaskScheduler {
     }
 
     this.ctx.events.removeEventListener(
-      "flight-monitor-event",
+      FlightMonitorEvent.type,
       this.flightMonitorEventListener
     );
   }
