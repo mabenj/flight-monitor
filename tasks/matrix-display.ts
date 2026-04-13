@@ -229,22 +229,20 @@ async function cycleFlightsUntilNoActiveFlights(
     return flight;
   };
 
-  let flightIds = flightsService.getActiveFlightIds();
-  let currentFlight = await getFreshFlight(flightIds[0]);
+  let flights = flightsService.getActiveFlights();
+  let currentFlight: Flight | null = flights[0];
+  const STALE_FLIGHT_THRESHOLD_MS = 5000;
+  if (Date.now() - currentFlight.timestamp * 1000 > STALE_FLIGHT_THRESHOLD_MS) {
+    currentFlight = await getFreshFlight(currentFlight.id);
+  }
   while (currentFlight && !signal.aborted) {
-    const index = flightIds.indexOf(currentFlight.id);
-    await showFlight(
-      matrix,
-      currentFlight,
-      index + 1,
-      flightIds.length,
-      signal
-    );
+    const index = flights.findIndex((f) => f.id === currentFlight?.id);
+    await showFlight(matrix, currentFlight, index + 1, flights.length, signal);
 
-    flightIds = flightsService.getActiveFlightIds();
-    const nextFlightId = flightIds[(index + 1) % flightIds.length];
+    flights = flightsService.getActiveFlights();
+    const nextFlight = flights[(index + 1) % flights.length];
     [currentFlight] = await Promise.all([
-      getFreshFlight(nextFlightId),
+      getFreshFlight(nextFlight.id),
       sleep(config.matrix.timing.betweenScrollsMs, signal),
     ]);
   }
@@ -318,6 +316,14 @@ async function showFlight(
       signal
     );
   }
+
+  await renderFrame(matrix, [
+    cmds.flightCount,
+    cmds.routeShort,
+    cmds.callsign,
+    aircraftForStatic,
+    cmds.altitude,
+  ]);
 }
 
 async function renderFrame(
