@@ -12,6 +12,12 @@ export class FlightsService {
     private readonly events: EventTarget
   ) {}
 
+  getActiveFlightIds(): string[] {
+    const sql = `SELECT flightId FROM activeFlight`;
+    const rows = this.db.prepare(sql).all();
+    return rows.map((row) => row.flightId as string);
+  }
+
   getActiveFlights(): Flight[] {
     const sql = `
         SELECT 

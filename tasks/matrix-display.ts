@@ -92,24 +92,28 @@ async function holdInfoScreenUntilNewActiveFlights(
     signal,
     newFlightsAbortController.signal,
   ]);
-  events.addEventListener(FlightMonitorEvent.type, (event: Event) => {
+  const handleNewFlights = (event: Event) => {
     if (
       event instanceof ActiveFlightsChangedEvent &&
       event.flightIds.length > 0
     ) {
       newFlightsAbortController.abort("New flights available");
     }
-  });
+  };
+  events.addEventListener(FlightMonitorEvent.type, handleNewFlights);
 
-  const { airportCode } = boundsService.getActive() ?? {};
-  let electricityPrices = await priceService.getCurrentAndUpcomingPrices();
-  while (!combinedSignal.aborted) {
-    const weather = airportCode ? weatherService.getWeather(airportCode) : null;
-    priceService.getCurrentAndUpcomingPrices().then((prices) => {
-      electricityPrices = prices;
-    });
+  try {
+    const { airportCode } = boundsService.getActive() ?? {};
+    let electricityPrices = await priceService.getCurrentAndUpcomingPrices();
 
-    try {
+    while (!combinedSignal.aborted) {
+      const weather = airportCode
+        ? weatherService.getWeather(airportCode)
+        : null;
+      priceService.getCurrentAndUpcomingPrices().then((prices) => {
+        electricityPrices = prices;
+      });
+
       if (weather?.metar) {
         const metarCmd: TextCmd = {
           cmd: "text",
@@ -161,17 +165,20 @@ async function holdInfoScreenUntilNewActiveFlights(
           );
         }
       }
-    } catch (error) {
-      if (
-        error instanceof DOMException &&
-        error.name === "AbortError" &&
-        error.message === "New flights available"
-      ) {
-        break;
-      } else {
-        throw error;
-      }
     }
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      error.name === "AbortError" &&
+      error.message === "New flights available"
+    ) {
+      return;
+    } else {
+      throw error;
+    }
+  } finally {
+    events.removeEventListener(FlightMonitorEvent.type, handleNewFlights);
+    await renderFrame(matrix, getStaticCmds(null));
   }
 
   function getStaticCmds(weather: Weather | null): TextCmd[] {
@@ -213,30 +220,33 @@ async function cycleFlightsUntilNoActiveFlights(
 ): Promise<void> {
   const { matrix, flightsService, fr24 } = ctx;
 
-  const refreshFlight = async (flightId: string) => {
+  const getFreshFlight = async (flightId: string) => {
     const flight = await fr24.getFlightDetails(flightId);
     if (!flight) {
-      return;
+      return null;
     }
     flightsService.setFlight(flight);
+    return flight;
   };
 
-  let flights = flightsService.getActiveFlights();
-  let currentFlight = flights[0];
+  let flightIds = flightsService.getActiveFlightIds();
+  let currentFlight = await getFreshFlight(flightIds[0]);
   while (currentFlight && !signal.aborted) {
-    const index = flights.findIndex((f) => f.id === currentFlight.id);
-    if (index === -1) {
-      break;
-    }
-    const nextFlight = flights[(index + 1) % flights.length];
-    const STALE_THRESHOLD_MS = 5000;
-    if (Date.now() - nextFlight.timestamp * 1000 > STALE_THRESHOLD_MS) {
-      refreshFlight(nextFlight.id);
-    }
-    await showFlight(matrix, currentFlight, index + 1, flights.length, signal);
+    const index = flightIds.indexOf(currentFlight.id);
+    await showFlight(
+      matrix,
+      currentFlight,
+      index + 1,
+      flightIds.length,
+      signal
+    );
 
-    flights = flightsService.getActiveFlights();
-    currentFlight = flights[(index + 1) % flights.length];
+    flightIds = flightsService.getActiveFlightIds();
+    const nextFlightId = flightIds[(index + 1) % flightIds.length];
+    [currentFlight] = await Promise.all([
+      getFreshFlight(nextFlightId),
+      sleep(config.matrix.timing.betweenScrollsMs, signal),
+    ]);
   }
 }
 
@@ -308,15 +318,6 @@ async function showFlight(
       signal
     );
   }
-
-  await renderFrame(matrix, [
-    cmds.flightCount,
-    cmds.routeShort,
-    cmds.callsign,
-    aircraftForStatic,
-    cmds.altitude,
-  ]);
-  await sleep(config.matrix.timing.betweenScrollsMs, signal);
 }
 
 async function renderFrame(
