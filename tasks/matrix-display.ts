@@ -95,7 +95,8 @@ async function holdInfoScreenUntilNewActiveFlights(
   const handleNewFlights = (event: Event) => {
     if (
       event instanceof ActiveFlightsChangedEvent &&
-      event.flightIds.length > 0
+      event.flightIds.length > 0 &&
+      !combinedSignal.aborted
     ) {
       newFlightsAbortController.abort("New flights available");
     }
@@ -167,11 +168,7 @@ async function holdInfoScreenUntilNewActiveFlights(
       }
     }
   } catch (error) {
-    if (
-      error instanceof DOMException &&
-      error.name === "AbortError" &&
-      error.message === "New flights available"
-    ) {
+    if (typeof error === "string" && error === "New flights available") {
       return;
     } else {
       throw error;
@@ -220,21 +217,24 @@ async function cycleFlightsUntilNoActiveFlights(
 ): Promise<void> {
   const { matrix, flightsService, fr24 } = ctx;
 
-  const getFreshFlight = async (flightId: string) => {
-    const flight = await fr24.getFlightDetails(flightId);
+  const ensureFlightIsFresh = async (flight: Flight | undefined) => {
     if (!flight) {
       return null;
     }
-    flightsService.setFlight(flight);
-    return flight;
+    const STALE_FLIGHT_THRESHOLD_MS = 1000;
+    if (Date.now() - flight.timestamp * 1000 < STALE_FLIGHT_THRESHOLD_MS) {
+      return flight;
+    }
+    const freshFlight = await fr24.getFlightDetails(flight.id);
+    if (!freshFlight) {
+      return null;
+    }
+    flightsService.setFlight(freshFlight);
+    return freshFlight;
   };
 
   let flights = flightsService.getActiveFlights();
-  let currentFlight: Flight | null = flights[0];
-  const STALE_FLIGHT_THRESHOLD_MS = 5000;
-  if (Date.now() - currentFlight.timestamp * 1000 > STALE_FLIGHT_THRESHOLD_MS) {
-    currentFlight = await getFreshFlight(currentFlight.id);
-  }
+  let currentFlight = await ensureFlightIsFresh(flights[0]);
   while (currentFlight && !signal.aborted) {
     const index = flights.findIndex((f) => f.id === currentFlight?.id);
     await showFlight(matrix, currentFlight, index + 1, flights.length, signal);
@@ -242,7 +242,7 @@ async function cycleFlightsUntilNoActiveFlights(
     flights = flightsService.getActiveFlights();
     const nextFlight = flights[(index + 1) % flights.length];
     [currentFlight] = await Promise.all([
-      getFreshFlight(nextFlight.id),
+      ensureFlightIsFresh(nextFlight),
       sleep(config.matrix.timing.betweenScrollsMs, signal),
     ]);
   }

@@ -58,9 +58,7 @@ export function getNestedOrDefault<T, K extends string, D>(
 
 export function sleep(ms: number, abortSignal?: AbortSignal): Promise<void> {
   if (abortSignal?.aborted) {
-    return Promise.reject(
-      abortSignal.reason ?? new DOMException("Sleep aborted", "AbortError")
-    );
+    return Promise.reject(abortSignal.reason ?? "Sleep aborted");
   }
 
   if (ms <= 1000 || !abortSignal) {
@@ -74,9 +72,7 @@ export function sleep(ms: number, abortSignal?: AbortSignal): Promise<void> {
       if (timeoutId !== null) {
         clearTimeout(timeoutId);
       }
-      reject(
-        abortSignal?.reason ?? new DOMException("Sleep aborted", "AbortError")
-      );
+      reject(abortSignal.reason ?? "Sleep aborted");
     };
 
     timeoutId = setTimeout(() => {

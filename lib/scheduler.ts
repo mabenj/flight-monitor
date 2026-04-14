@@ -87,7 +87,7 @@ export class TaskScheduler {
 
     // Abort all running tasks immediately
     if (this.abortController) {
-      this.abortController.abort();
+      this.abortController.abort("Scheduler stopped");
       this.abortController = null;
     }
 
@@ -149,7 +149,7 @@ export class TaskScheduler {
       try {
         await updateMatrixDisplay(this.ctx, this.abortController!.signal);
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
+        if (typeof error === "string" && error === "Scheduler stopped") {
           this.log.debug("Matrix task was cancelled");
           cancelled = true;
         } else {
