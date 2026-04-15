@@ -58,7 +58,7 @@ export class FlightRadar24ApiService {
       }
 
       const flightData = await response.json();
-      if (!flightData) {
+      if (!flightData || flightData["identification"]?.["id"] !== flightId) {
         this.log.error(
           `Failed to deserialize flight details for flight {flightId}: {responseStatus} {responseText}`,
           {
