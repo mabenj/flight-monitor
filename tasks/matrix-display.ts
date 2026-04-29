@@ -182,7 +182,8 @@ async function holdInfoScreenUntilNewActiveFlights(
     const now = new Date();
     const timeString = formatTime(now);
     const dateString = formatDate(now);
-    const tempC = weather?.tempCelsius ? `${weather?.tempCelsius}°C` : "";
+    const tempC =
+      weather?.tempCelsius != null ? `${weather?.tempCelsius}°C` : "";
 
     const timeCmd: TextCmd = {
       cmd: "text",
