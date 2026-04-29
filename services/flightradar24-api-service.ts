@@ -60,11 +60,22 @@ export class FlightRadar24ApiService {
       const flightData = await response.json();
       if (!flightData) {
         this.log.error(
-          `Failed to deserialize flight details for flight {flightId}: {responseStatus} {responseText}`,
+          `Failed to deserialize flight details for flight {flightId}: {responseStatus} {statusText}`,
           {
             flightId,
             responseStatus: response.status,
-            responseText: await response.text(),
+            statusText: response.statusText,
+          }
+        );
+        return null;
+      }
+
+      if (flightData["identification"]?.["id"] !== flightId) {
+        this.log.error(
+          `Flight ID mismatch for flight {flightId}: received ID {receivedId}`,
+          {
+            flightId,
+            receivedId: flightData["identification"]?.["id"],
           }
         );
         return null;
@@ -103,11 +114,11 @@ export class FlightRadar24ApiService {
       const json = await response.json();
       if (!json) {
         this.log.error(
-          `Failed to deserialize airport info for {icao}: {responseStatus} {responseText}`,
+          `Failed to deserialize airport info for {icao}: {responseStatus} {statusText}`,
           {
             icao,
             responseStatus: response.status,
-            responseText: await response.text(),
+            statusText: response.statusText,
           }
         );
         return null;
